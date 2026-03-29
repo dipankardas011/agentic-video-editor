@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VideoEditor</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:        #141414;
+      --surface:   #1e1e1e;
+      --panel:     #252525;
+      --border:    #333;
+      --accent:    #4a9eff;
+      --playhead:  #ff4a4a;
+      --text:      #d4d4d4;
+      --text-dim:  #777;
+      --video-trk: #2a4a7a;
+      --audio-trk: #2a6a4a;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 13px;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* ── Layout ─────────────────────────────────────── */
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* ── Toolbar ──────────────────────────────────── */
+    #toolbar {
+      height: 38px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    #toolbar .logo {
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+      color: var(--accent);
+      margin-right: 12px;
+    }
+    .tb-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 4px;
+      padding: 3px 10px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.15s;
+    }
+    .tb-btn:hover { background: rgba(255,255,255,0.07); }
+    .tb-btn.accent { border-color: var(--accent); color: var(--accent); }
+
+    #file-input { display: none; }
+
+    #time-display {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--text-dim);
+      font-variant-numeric: tabular-nums;
+      font-family: monospace;
+      letter-spacing: 1px;
+    }
+
+    /* ── Preview ──────────────────────────────────── */
+    #preview-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0d0d0d;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #drop-overlay {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      border: 2px dashed #3a3a3a;
+      border-radius: 14px;
+      padding: 60px 80px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    #drop-overlay:hover,
+    #drop-overlay.drag-over {
+      border-color: var(--accent);
+      background: rgba(74,158,255,0.05);
+    }
+    #drop-overlay svg { opacity: 0.35; }
+    #drop-overlay p  { color: var(--text-dim); font-size: 14px; }
+    #drop-overlay small { color: #555; }
+
+    #video-player {
+      display: none;
+      max-width: 100%;
+      max-height: 100%;
+      border-radius: 3px;
+      background: #000;
+      box-shadow: 0 8px 48px rgba(0,0,0,0.7);
+      outline: none;
+    }
+
+    /* ── Timeline panel ───────────────────────────── */
+    #timeline-panel {
+      height: 190px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+
+    /* ruler row */
+    #ruler-row {
+      display: flex;
+      height: 24px;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+    }
+    .tl-label-col {
+      width: 90px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--border);
+    }
+    #ruler-canvas-wrap {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    #ruler-canvas { display: block; }
+
+    /* tracks */
+    #tracks-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .track-row {
+      display: flex;
+      flex: 1;
+      border-bottom: 1px solid #222;
+    }
+    .track-label {
+      width: 90px;
+      flex-shrink: 0;
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      gap: 7px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .track-label .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot-video { background: #4a8eff; }
+    .dot-audio { background: #4aff8e; }
+
+    .track-canvas-wrap {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    .track-canvas { display: block; }
+
+    /* shared playhead */
+    .ph-line {
+      position: absolute;
+      top: 0; bottom: 0;
+      width: 1px;
+      background: var(--playhead);
+      pointer-events: none;
+      z-index: 20;
+    }
+    .ph-head {
+      position: absolute;
+      top: 0;
+      width: 9px; height: 9px;
+      background: var(--playhead);
+      border-radius: 50%;
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+
+    /* playhead column in ruler */
+    #ruler-ph-wrap {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Toolbar -->
+  <div id="toolbar">
+    <span class="logo">&#9654; VideoEditor</span>
+    <button class="tb-btn accent" id="open-btn">Open File</button>
+    <input type="file" id="file-input" accept="video/*" />
+    <span id="filename-label" style="color:var(--text-dim); margin-left:6px;"></span>
+    <span id="time-display">00:00.000 / 00:00.000</span>
+  </div>
+
+  <!-- Preview -->
+  <div id="preview-wrap" id="preview-area">
+    <div id="drop-overlay">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <p>Drop a video file here</p>
+      <small>or click Open File above — MP4, MOV, WebM, MKV …</small>
+    </div>
+    <video id="video-player" controls></video>
+  </div>
+
+  <!-- Timeline -->
+  <div id="timeline-panel">
+
+    <!-- Ruler row -->
+    <div id="ruler-row">
+      <div class="tl-label-col"></div>
+      <div id="ruler-canvas-wrap">
+        <canvas id="ruler-canvas" height="24"></canvas>
+        <div id="ruler-ph-wrap">
+          <div class="ph-head" id="ruler-ph-head" style="left:0"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tracks -->
+    <div id="tracks-area">
+
+      <!-- Video track -->
+      <div class="track-row" id="video-track-row">
+        <div class="track-label"><span class="dot dot-video"></span> Video</div>
+        <div class="track-canvas-wrap" id="video-canvas-wrap">
+          <canvas class="track-canvas" id="video-track-canvas"></canvas>
+          <div class="ph-line" id="video-ph-line" style="left:0"></div>
+        </div>
+      </div>
+
+      <!-- Audio track -->
+      <div class="track-row" id="audio-track-row">
+        <div class="track-label"><span class="dot dot-audio"></span> Audio</div>
+        <div class="track-canvas-wrap" id="audio-canvas-wrap">
+          <canvas class="track-canvas" id="audio-track-canvas"></canvas>
+          <div class="ph-line" id="audio-ph-line" style="left:0"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ── Elements ───────────────────────────────────────────────
+  const fileInput    = document.getElementById('file-input');
+  const openBtn      = document.getElementById('open-btn');
+  const dropOverlay  = document.getElementById('drop-overlay');
+  const previewWrap  = document.getElementById('preview-wrap');
+  const videoPlayer  = document.getElementById('video-player');
+  const filenameLabel = document.getElementById('filename-label');
+  const timeDisplay  = document.getElementById('time-display');
+
+  const rulerCanvas  = document.getElementById('ruler-canvas');
+  const rulerWrap    = document.getElementById('ruler-canvas-wrap');
+  const rulerPhHead  = document.getElementById('ruler-ph-head');
+
+  const videoCanvas  = document.getElementById('video-track-canvas');
+  const videoWrap    = document.getElementById('video-canvas-wrap');
+  const videoPhLine  = document.getElementById('video-ph-line');
+
+  const audioCanvas  = document.getElementById('audio-track-canvas');
+  const audioWrap    = document.getElementById('audio-canvas-wrap');
+  const audioPhLine  = document.getElementById('audio-ph-line');
+
+  let duration = 0;
+  let videoObjectURL = null;
+
+  // ── Open file ──────────────────────────────────────────────
+  openBtn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => loadFile(e.target.files[0]));
+
+  // ── Drag & drop ────────────────────────────────────────────
+  previewWrap.addEventListener('dragover', e => { e.preventDefault(); dropOverlay.classList.add('drag-over'); });
+  previewWrap.addEventListener('dragleave', () => dropOverlay.classList.remove('drag-over'));
+  previewWrap.addEventListener('drop', e => {
+    e.preventDefault();
+    dropOverlay.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f && f.type.startsWith('video/')) loadFile(f);
+  });
+  dropOverlay.addEventListener('click', () => fileInput.click());
+
+  // ── Load file ──────────────────────────────────────────────
+  function loadFile(file) {
+    if (!file) return;
+    if (videoObjectURL) URL.revokeObjectURL(videoObjectURL);
+    videoObjectURL = URL.createObjectURL(file);
+    videoPlayer.src = videoObjectURL;
+    filenameLabel.textContent = file.name;
+
+    dropOverlay.style.display = 'none';
+    videoPlayer.style.display = 'block';
+
+    videoPlayer.addEventListener('loadedmetadata', () => {
+      duration = videoPlayer.duration;
+      resizeAll();
+      drawRuler();
+      extractVideoThumbnails();
+      decodeAudioWaveform(file);
+    }, { once: true });
+  }
+
+  // ── Playhead update loop ──────────────────────────────────
+  function updatePlayhead() {
+    if (!duration) return;
+    const t = videoPlayer.currentTime;
+    const frac = t / duration;
+
+    const rw = rulerWrap.clientWidth;
+    const x = frac * rw;
+
+    rulerPhHead.style.left   = x + 'px';
+    videoPhLine.style.left   = x + 'px';
+    audioPhLine.style.left   = x + 'px';
+
+    // time display
+    timeDisplay.textContent  = `${fmtTime(t)} / ${fmtTime(duration)}`;
+  }
+
+  videoPlayer.addEventListener('timeupdate', updatePlayhead);
+
+  function fmtTime(s) {
+    const m  = Math.floor(s / 60);
+    const ss = Math.floor(s % 60);
+    const ms = Math.floor((s % 1) * 1000);
+    return `${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}.${String(ms).padStart(3,'0')}`;
+  }
+
+  // ── Click-to-seek on timeline ─────────────────────────────
+  function seekFromClick(e, wrap) {
+    if (!duration) return;
+    const rect = wrap.getBoundingClientRect();
+    const frac = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    videoPlayer.currentTime = frac * duration;
+    updatePlayhead();
+  }
+
+  rulerWrap.addEventListener('click',      e => seekFromClick(e, rulerWrap));
+  videoWrap.addEventListener('click',      e => seekFromClick(e, videoWrap));
+  audioWrap.addEventListener('click',      e => seekFromClick(e, audioWrap));
+
+  // ── Resize ─────────────────────────────────────────────────
+  function resizeAll() {
+    [rulerCanvas, videoCanvas, audioCanvas].forEach(c => {
+      const wrap = c.parentElement;
+      c.width  = wrap.clientWidth;
+      c.height = wrap.clientHeight;
+    });
+    rulerCanvas.height = 24;
+  }
+
+  window.addEventListener('resize', () => {
+    if (!duration) return;
+    resizeAll();
+    drawRuler();
+    // Re-draw thumbnails & waveform from cache
+    drawThumbsFromCache();
+    drawWaveformFromCache();
+  });
+
+  // ── Ruler ─────────────────────────────────────────────────
+  function drawRuler() {
+    const ctx = rulerCanvas.getContext('2d');
+    const w = rulerCanvas.width, h = rulerCanvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    ctx.fillStyle = '#252525';
+    ctx.fillRect(0, 0, w, h);
+
+    if (!duration) return;
+
+    // choose tick interval
+    const pxPerSec = w / duration;
+    let interval = 1;
+    const candidates = [0.1,0.5,1,2,5,10,15,30,60,120,300];
+    for (const c of candidates) {
+      if (pxPerSec * c >= 60) { interval = c; break; }
+    }
+
+    ctx.strokeStyle = '#555';
+    ctx.fillStyle   = '#888';
+    ctx.font        = '10px monospace';
+    ctx.textBaseline = 'middle';
+
+    for (let t = 0; t <= duration + 0.001; t += interval) {
+      const x = (t / duration) * w;
+      const isMajor = Number.isInteger(t) || (interval < 1);
+
+      ctx.beginPath();
+      ctx.moveTo(x, isMajor ? 4 : 10);
+      ctx.lineTo(x, h);
+      ctx.lineWidth = isMajor ? 1 : 0.5;
+      ctx.stroke();
+
+      if (isMajor && x + 4 < w) {
+        ctx.fillText(fmtTimeShort(t), x + 3, h / 2 + 1);
+      }
+    }
+  }
+
+  function fmtTimeShort(s) {
+    const m  = Math.floor(s / 60);
+    const ss = (s % 60).toFixed(s < 60 && s % 1 !== 0 ? 1 : 0);
+    return m > 0 ? `${m}:${String(Math.floor(ss)).padStart(2,'0')}` : `${ss}s`;
+  }
+
+  // ── Video thumbnails ───────────────────────────────────────
+  let thumbCache = []; // { time, bitmap }
+
+  function extractVideoThumbnails() {
+    thumbCache = [];
+    const w = videoCanvas.width, h = videoCanvas.height;
+    const THUMB_W = 80;
+    const count   = Math.max(1, Math.floor(w / THUMB_W));
+    const offscreen = document.createElement('canvas');
+    offscreen.width  = THUMB_W;
+    offscreen.height = h;
+    const octx = offscreen.getContext('2d');
+
+    let i = 0;
+    const seekNext = () => {
+      if (i >= count) { drawThumbsFromCache(); return; }
+      const t = (i / (count - 1 || 1)) * duration;
+      videoPlayer.currentTime = t;
+      videoPlayer.onseeked = () => {
+        octx.drawImage(videoPlayer, 0, 0, THUMB_W, h);
+        createImageBitmap(offscreen).then(bmp => {
+          thumbCache.push({ time: t, bitmap: bmp });
+          i++;
+          seekNext();
+        });
+      };
+    };
+    seekNext();
+  }
+
+  function drawThumbsFromCache() {
+    if (!thumbCache.length) return;
+    const ctx = videoCanvas.getContext('2d');
+    const w = videoCanvas.width, h = videoCanvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    const THUMB_W = Math.floor(w / thumbCache.length);
+    const barH    = Math.floor(h * 0.3);
+
+    // background bar
+    ctx.fillStyle = '#1a2a45';
+    ctx.beginPath();
+    ctx.roundRect(0, (h - barH) / 2, w, barH, 4);
+    ctx.fill();
+
+    // thumbnails inside bar
+    thumbCache.forEach((entry, idx) => {
+      const x = (entry.time / duration) * w;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x, (h - barH) / 2, THUMB_W, barH);
+      ctx.clip();
+      ctx.drawImage(entry.bitmap, x, (h - barH) / 2, THUMB_W, barH);
+      ctx.restore();
+
+      // subtle separator
+      if (idx > 0) {
+        ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, (h - barH) / 2);
+        ctx.lineTo(x, (h + barH) / 2);
+        ctx.stroke();
+      }
+    });
+
+    // border
+    ctx.strokeStyle = '#4a8eff';
+    ctx.lineWidth   = 1;
+    ctx.beginPath();
+    ctx.roundRect(0, (h - barH) / 2, w - 1, barH, 4);
+    ctx.stroke();
+  }
+
+  // ── Audio waveform ─────────────────────────────────────────
+  let waveformData = null; // Float32Array of normalised samples
+
+  function decodeAudioWaveform(file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const ctx = new AudioContext();
+      ctx.decodeAudioData(e.target.result)
+        .then(buffer => {
+          // Merge channels → mono
+          const nCh      = buffer.numberOfChannels;
+          const len      = buffer.length;
+          const merged   = new Float32Array(len);
+          for (let ch = 0; ch < nCh; ch++) {
+            const data = buffer.getChannelData(ch);
+            for (let i = 0; i < len; i++) merged[i] += data[i] / nCh;
+          }
+          // Downsample to canvas width
+          const TARGET = audioCanvas.width || 800;
+          const step   = Math.max(1, Math.floor(len / TARGET));
+          const peaks  = new Float32Array(TARGET);
+          for (let i = 0; i < TARGET; i++) {
+            let max = 0;
+            const off = i * step;
+            for (let j = 0; j < step; j++) {
+              const v = Math.abs(merged[off + j] || 0);
+              if (v > max) max = v;
+            }
+            peaks[i] = max;
+          }
+          waveformData = peaks;
+          drawWaveformFromCache();
+          ctx.close();
+        })
+        .catch(() => {
+          // No audio or decode error — draw a placeholder bar
+          waveformData = null;
+          drawNoAudio();
+        });
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function drawWaveformFromCache() {
+    if (!waveformData) { drawNoAudio(); return; }
+    const ctx = audioCanvas.getContext('2d');
+    const w   = audioCanvas.width, h = audioCanvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    // background
+    ctx.fillStyle = '#0f2a1a';
+    ctx.beginPath();
+    ctx.roundRect(0, 2, w, h - 4, 4);
+    ctx.fill();
+
+    const mid    = h / 2;
+    const SCALE  = (h / 2 - 4);
+    const peaks  = waveformData;
+    const ratio  = w / peaks.length;
+
+    // gradient fill
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0,   'rgba(74,255,142,0.6)');
+    grad.addColorStop(0.5, 'rgba(74,255,142,0.9)');
+    grad.addColorStop(1,   'rgba(74,255,142,0.6)');
+    ctx.fillStyle = grad;
+
+    ctx.beginPath();
+    ctx.moveTo(0, mid);
+    for (let i = 0; i < peaks.length; i++) {
+      const x = i * ratio;
+      ctx.lineTo(x, mid - peaks[i] * SCALE);
+    }
+    for (let i = peaks.length - 1; i >= 0; i--) {
+      const x = i * ratio;
+      ctx.lineTo(x, mid + peaks[i] * SCALE);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    // border
+    ctx.strokeStyle = '#4aff8e';
+    ctx.lineWidth   = 1;
+    ctx.beginPath();
+    ctx.roundRect(0, 2, w - 1, h - 4, 4);
+    ctx.stroke();
+  }
+
+  function drawNoAudio() {
+    const ctx = audioCanvas.getContext('2d');
+    const w   = audioCanvas.width, h = audioCanvas.height;
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(0, 2, w, h - 4);
+    ctx.fillStyle = '#444';
+    ctx.font      = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No audio track', w / 2, h / 2 + 4);
+    ctx.textAlign = 'start';
+  }
+
+  // ── Initial resize ─────────────────────────────────────────
+  resizeAll();
+})();
+</script>
+</body>
+</html>
