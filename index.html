@@ -11,32 +11,67 @@
   --trim:#ff9500;--text:#d4d4d4;--dim:#666;
 }
 html,body{height:100%;background:var(--bg);color:var(--text);
-  font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;
-  overflow:hidden;user-select:none}
+  font-family:'Segoe UI',system-ui,sans-serif;font-size:13px;overflow:hidden;user-select:none}
 #app{display:flex;flex-direction:column;height:100vh}
 
 /* ── Toolbar ── */
 #toolbar{height:38px;background:var(--panel);border-bottom:1px solid var(--border);
-  display:flex;align-items:center;padding:0 14px;gap:8px;flex-shrink:0}
+  display:flex;align-items:center;padding:0 14px;gap:8px;flex-shrink:0;z-index:50}
 .logo{font-weight:700;font-size:14px;color:var(--accent);margin-right:4px}
 .tb-btn{background:transparent;border:1px solid var(--border);color:var(--text);
   border-radius:4px;padding:3px 10px;cursor:pointer;font-size:12px;transition:background .15s}
-.tb-btn:hover{background:rgba(255,255,255,.07)}
+.tb-btn:hover:not(:disabled){background:rgba(255,255,255,.07)}
 .tb-btn:disabled{opacity:.35;cursor:not-allowed}
-.tb-btn.open{border-color:var(--accent);color:var(--accent)}
-.tb-btn.render{border-color:#4aff8e;color:#4aff8e}
-#file-input{display:none}
-#status{font-size:11px;color:var(--dim);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#trim-info{font-size:11px;color:var(--dim);font-family:monospace;letter-spacing:.3px}
+.tb-btn.blue{border-color:var(--accent);color:var(--accent)}
+.tb-btn.orange{border-color:var(--trim);color:var(--trim)}
+.tb-btn.green{border-color:#4aff8e;color:#4aff8e}
+#status{font-size:11px;color:var(--dim);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#trim-info{font-size:11px;color:#555;font-family:monospace}
 #time-display{margin-left:auto;font-size:12px;color:var(--dim);font-family:monospace;letter-spacing:1px}
+
+/* ── Content (sidebar + preview) ── */
+#content{flex:1;display:flex;min-height:0}
+
+/* ── Sidebar ── */
+#sidebar{width:190px;flex-shrink:0;background:#181818;border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden}
+#sb-hdr{height:34px;background:var(--panel);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 10px;gap:6px;flex-shrink:0}
+#sb-hdr span{flex:1;font-size:11px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.5px;color:var(--dim)}
+#add-btn{background:transparent;border:1px solid var(--border);color:var(--accent);
+  border-radius:4px;width:22px;height:22px;cursor:pointer;font-size:18px;line-height:1;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+#add-btn:hover{background:rgba(74,158,255,.1)}
+#clip-input{display:none}
+#clip-list{flex:1;overflow-y:auto;overflow-x:hidden}
+#clip-list::-webkit-scrollbar{width:4px}
+#clip-list::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
+.sb-empty{padding:24px 12px;text-align:center;color:#444;font-size:11px;line-height:1.7}
+
+/* Clip card */
+.clip-card{padding:8px;border-bottom:1px solid #1e1e1e;
+  border-left:3px solid transparent;transition:background .15s;cursor:pointer}
+.clip-card:hover{background:#1f1f1f}
+.clip-card.in-tl{border-left-color:var(--accent)}
+.clip-card.uploading{opacity:.55}
+.clip-thumb{width:100%;height:52px;display:block;border-radius:3px;background:#111;object-fit:cover}
+.clip-meta{margin:5px 0 6px}
+.clip-name{font-size:11px;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.clip-dur{font-size:10px;color:#555;font-family:monospace;margin-top:1px}
+.clip-btn{width:100%;padding:4px 0;background:transparent;border-radius:3px;
+  cursor:pointer;font-size:11px;font-weight:600;letter-spacing:.2px;transition:background .15s}
+.clip-btn.add{border:1px solid var(--accent);color:var(--accent)}
+.clip-btn.add:hover{background:rgba(74,158,255,.12)}
+.clip-btn.rem{border:1px solid #ff5555;color:#ff5555}
+.clip-btn.rem:hover{background:rgba(255,74,74,.1)}
 
 /* ── Preview ── */
 #preview-wrap{flex:1;display:flex;align-items:center;justify-content:center;
-  background:#0d0d0d;overflow:hidden}
-#drop-overlay{display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:12px;border:2px dashed #3a3a3a;border-radius:14px;padding:60px 80px;cursor:pointer;
-  transition:border-color .2s,background .2s}
-#drop-overlay:hover,#drop-overlay.drag-over{border-color:var(--accent);background:rgba(74,158,255,.05)}
+  background:#0d0d0d;position:relative;overflow:hidden}
+#drop-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:12px;cursor:pointer;transition:background .2s}
+#drop-overlay:hover,#drop-overlay.drag-over{background:rgba(74,158,255,.04)}
 #drop-overlay p{color:var(--dim);font-size:14px}
 #drop-overlay small{color:#444}
 #video-player{display:none;max-width:100%;max-height:100%;border-radius:3px;
@@ -45,58 +80,48 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 /* ── Timeline ── */
 #timeline{height:188px;background:var(--surface);border-top:1px solid var(--border);
   display:flex;flex-direction:column;flex-shrink:0}
-
-#ruler-row{height:26px;flex-shrink:0;display:flex;
-  background:var(--panel);border-bottom:1px solid var(--border)}
-.track-row{flex:1;display:flex;border-bottom:1px solid #202020;min-height:0}
-
+#ruler-row{height:26px;flex-shrink:0;display:flex;background:var(--panel);border-bottom:1px solid var(--border)}
+.track-row{flex:1;display:flex;border-bottom:1px solid #1c1c1c;min-height:0}
 .tl-label{width:90px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--border);
   display:flex;align-items:center;padding:0 10px;gap:6px;
   font-size:11px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.4px}
 #ruler-row .tl-label{justify-content:center;font-size:10px}
 .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 .dot-v{background:#4a8eff}.dot-a{background:#4aff8e}
-
-/* Scroll containers */
 .tl-scroll{flex:1;overflow-x:scroll;overflow-y:hidden;position:relative}
-/* hide scrollbar on ruler + video; show only on audio (bottom) */
 #ruler-scroll::-webkit-scrollbar,#video-scroll::-webkit-scrollbar{display:none}
 #ruler-scroll,#video-scroll{scrollbar-width:none}
-#audio-scroll::-webkit-scrollbar{height:7px}
+#audio-scroll::-webkit-scrollbar{height:6px}
 #audio-scroll::-webkit-scrollbar-track{background:#181818}
-#audio-scroll::-webkit-scrollbar-thumb{background:#3a3a3a;border-radius:4px}
+#audio-scroll::-webkit-scrollbar-thumb{background:#3a3a3a;border-radius:3px}
 #audio-scroll::-webkit-scrollbar-thumb:hover{background:#555}
-
 .tl-inner{position:relative;height:100%}
 #ruler-canvas,#video-canvas,#audio-canvas{position:absolute;top:0;left:0}
 
-/* Selection + handles */
-#sel-fill{position:absolute;top:0;bottom:0;background:rgba(255,149,0,.15);
-  pointer-events:none;z-index:5;border-left:2px solid var(--trim);border-right:2px solid var(--trim)}
-.trim-handle{position:absolute;top:0;height:100%;width:22px;
-  cursor:ew-resize;z-index:20;transform:translateX(-50%)}
-/* vertical bar */
-.trim-handle::after{content:'';position:absolute;left:10px;top:0;bottom:0;
-  width:2px;border-radius:1px;background:var(--trim)}
-/* label cap */
-.trim-handle::before{
-  content:attr(data-label);
-  position:absolute;top:0;left:50%;transform:translateX(-50%);
-  background:var(--trim);color:#111;
-  font-size:8px;font-weight:800;letter-spacing:.5px;
-  padding:2px 5px;border-radius:0 0 4px 4px;
-  white-space:nowrap;pointer-events:none;line-height:1.4}
+/* Trim handles */
+#sel-fill{position:absolute;top:0;bottom:0;background:rgba(255,149,0,.13);pointer-events:none;z-index:5;
+  border-left:2px solid var(--trim);border-right:2px solid var(--trim)}
+.trim-handle{position:absolute;top:0;height:100%;width:22px;cursor:ew-resize;z-index:20;transform:translateX(-50%)}
+.trim-handle::after{content:'';position:absolute;left:10px;top:0;bottom:0;width:2px;border-radius:1px;background:var(--trim)}
+.trim-handle::before{content:attr(data-label);position:absolute;top:0;left:50%;transform:translateX(-50%);
+  background:var(--trim);color:#111;font-size:8px;font-weight:800;letter-spacing:.5px;
+  padding:2px 5px;border-radius:0 0 4px 4px;white-space:nowrap;pointer-events:none;line-height:1.4}
 .trim-handle:hover::after,.trim-handle:hover::before{background:#ffbe4a}
 
 /* Playhead */
-.ph-line{position:absolute;top:0;bottom:0;width:1px;
-  background:var(--playhead);pointer-events:none;z-index:25}
-/* downward triangle */
-.ph-dot{position:absolute;top:0;
-  width:0;height:0;
-  border-left:5px solid transparent;border-right:5px solid transparent;
-  border-top:9px solid var(--playhead);
+.ph-line{position:absolute;top:0;bottom:0;width:1px;background:var(--playhead);pointer-events:none;z-index:25}
+.ph-dot{position:absolute;top:0;width:0;height:0;border-left:5px solid transparent;
+  border-right:5px solid transparent;border-top:9px solid var(--playhead);
   transform:translateX(-50%);pointer-events:none;z-index:26}
+
+/* Context menu */
+#ctx-menu{position:fixed;background:#2a2a2a;border:1px solid var(--border);
+  border-radius:6px;padding:4px 0;z-index:1000;display:none;min-width:170px;
+  box-shadow:0 4px 24px rgba(0,0,0,.6)}
+.ctx-item{padding:7px 14px;cursor:pointer;font-size:12px;color:var(--text);display:flex;align-items:center;gap:8px}
+.ctx-item:hover{background:rgba(255,255,255,.07)}
+.ctx-item.danger{color:#ff5555}
+.ctx-sep{height:1px;background:var(--border);margin:3px 0}
 </style>
 </head>
 <body>
@@ -105,45 +130,59 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 <!-- Toolbar -->
 <div id="toolbar">
   <span class="logo">&#9654; VideoEditor</span>
-  <button class="tb-btn open" id="open-btn">Open File</button>
-  <input type="file" id="file-input" accept="video/*"/>
-  <span id="status">Drop or open a video file</span>
-  <span id="trim-info" style="color:#555;font-size:11px;font-family:monospace">Drag IN / OUT handles on timeline to set clip</span>
+  <span id="status">Add clips from the sidebar →</span>
+  <span id="trim-info">Drag IN / OUT handles to set render region</span>
   <span id="time-display">--:--.--- / --:--.---</span>
-  <button class="tb-btn render" id="render-btn" disabled>Render Clip</button>
+  <button class="tb-btn orange" id="split-btn" disabled title="Split clip at current playhead position">✂ Split</button>
+  <button class="tb-btn green"  id="render-btn" disabled>Render</button>
 </div>
 
-<!-- Preview -->
-<div id="preview-wrap">
-  <div id="drop-overlay">
-    <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#666"
-         stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-      <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-    </svg>
-    <p>Drop a video here</p>
-    <small>MP4 &middot; MOV &middot; WebM &middot; MKV</small>
+<!-- Content -->
+<div id="content">
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div id="sb-hdr">
+      <span>Clips</span>
+      <button id="add-btn" title="Add video file(s)">+</button>
+    </div>
+    <div id="clip-list">
+      <div class="sb-empty">Click <strong style="color:var(--accent)">+</strong> to add video clips,<br/>then add them to the timeline.</div>
+    </div>
+    <input type="file" id="clip-input" accept="video/*" multiple/>
   </div>
-  <video id="video-player" controls></video>
-</div>
+
+  <!-- Preview -->
+  <div id="preview-wrap">
+    <div id="drop-overlay">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#555"
+           stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <p>Drop video files here</p>
+      <small>or use the + button in the sidebar</small>
+    </div>
+    <video id="video-player" controls></video>
+  </div>
+
+</div><!-- #content -->
 
 <!-- Timeline -->
 <div id="timeline">
-
   <div id="ruler-row">
     <div class="tl-label">TIMELINE</div>
     <div class="tl-scroll" id="ruler-scroll">
       <div class="tl-inner" id="ruler-inner">
         <canvas id="ruler-canvas" height="26"></canvas>
         <div id="sel-fill"></div>
-        <div class="trim-handle" id="in-handle" data-label="IN"></div>
+        <div class="trim-handle" id="in-handle"  data-label="IN"></div>
         <div class="trim-handle" id="out-handle" data-label="OUT"></div>
         <div class="ph-line" id="ruler-ph-line"></div>
-        <div class="ph-dot" id="ruler-ph-dot"></div>
+        <div class="ph-dot"  id="ruler-ph-dot"></div>
       </div>
     </div>
   </div>
-
   <div class="track-row">
     <div class="tl-label"><span class="dot dot-v"></span>Video</div>
     <div class="tl-scroll" id="video-scroll">
@@ -153,7 +192,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);
       </div>
     </div>
   </div>
-
   <div class="track-row">
     <div class="tl-label"><span class="dot dot-a"></span>Audio</div>
     <div class="tl-scroll" id="audio-scroll">
@@ -163,24 +201,46 @@ html,body{height:100%;background:var(--bg);color:var(--text);
       </div>
     </div>
   </div>
-
 </div>
+
 </div><!-- #app -->
+
+<!-- Context menu -->
+<div id="ctx-menu">
+  <div class="ctx-item" id="ctx-split">✂ Split at playhead</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item danger" id="ctx-remove-seg">Remove this segment</div>
+</div>
 
 <script>
 (() => {
 'use strict';
 
-// ── DOM refs ──────────────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────
+const PX_PER_SEC    = 120;
+const PEAKS_N       = 1000;
+const THUMB_N       = 22;
+
+const PALETTE = [
+  { bg:'#192a40', border:'#4a8eff', wave:'rgba(74,158,255,.75)' },
+  { bg:'#1a3020', border:'#4aff8e', wave:'rgba(74,255,142,.75)' },
+  { bg:'#281840', border:'#9a5aff', wave:'rgba(154,90,255,.75)' },
+  { bg:'#3a2210', border:'#ff8a4a', wave:'rgba(255,138,74,.75)' },
+  { bg:'#14282a', border:'#4affdf', wave:'rgba(74,255,223,.75)' },
+];
+
+// ── DOM ───────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
-const fileInput   = $('file-input');
-const openBtn     = $('open-btn');
+const clipInput   = $('clip-input');
+const addBtn      = $('add-btn');
+const clipList    = $('clip-list');
 const dropOverlay = $('drop-overlay');
 const previewWrap = $('preview-wrap');
 const video       = $('video-player');
 const statusEl    = $('status');
-const trimInfo    = $('trim-info');
+const trimInfoEl  = $('trim-info');
 const timeDisplay = $('time-display');
+const splitBtn    = $('split-btn');
 const renderBtn   = $('render-btn');
 
 const rulerScroll = $('ruler-scroll');
@@ -202,21 +262,59 @@ const audioInner  = $('audio-inner');
 const audioCanvas = $('audio-canvas');
 const audioPh     = $('audio-ph');
 
-// ── State ─────────────────────────────────────────────────────────────
-const PX_PER_SEC = 120;
-let duration  = 0;
-let serverPath = null;
-let trimIn    = 0;
-let trimOut   = 0;
-let thumbs    = [];       // [{time, bitmap}]
-let wavePeaks = null;     // Float32Array
+const ctxMenu      = $('ctx-menu');
+const ctxSplitItem = $('ctx-split');
+const ctxRemoveSeg = $('ctx-remove-seg');
 
-// ── Helpers ───────────────────────────────────────────────────────────
-const tlW = () => Math.max(rulerScroll.clientWidth, Math.ceil(duration * PX_PER_SEC));
-const tX  = t  => duration ? (t / duration) * tlW() : 0;
-const Xt  = x  => duration ? Math.max(0, Math.min(duration, (x / tlW()) * duration)) : 0;
+// ── State ─────────────────────────────────────────────────────────────
+let clips         = [];  // library
+let timelineItems = [];  // [{id, clipId, trimIn, trimOut}]
+let nextCId = 1, nextIId = 1;
+let activeItemIdx = 0;   // which timeline item is playing
+let loadedClipId  = null;
+let trimIn  = 0;
+let trimOut = 0;
+let dragHandle = null;
+let ctxEntry   = null;   // layout entry under right-click
+
+// ── Layout helpers ────────────────────────────────────────────────────
+function buildLayout() {
+  let off = 0;
+  return timelineItems.map(item => {
+    const clip = clips.find(c => c.id === item.clipId);
+    const dur  = item.trimOut - item.trimIn;
+    const e    = { item, clip, offset: off, dur };
+    off += dur;
+    return e;
+  });
+}
+
+function totalDur() {
+  const lay = buildLayout();
+  if (!lay.length) return 0;
+  const last = lay[lay.length - 1];
+  return last.offset + last.dur;
+}
+
+const tlW = () => Math.max(rulerScroll.clientWidth || 600, Math.ceil(totalDur() * PX_PER_SEC));
+const tX  = t => { const d = totalDur(), w = tlW(); return (d && w) ? (t / d) * w : 0; };
+const Xt  = x => { const d = totalDur(), w = tlW(); return (d && w) ? Math.max(0, Math.min(d, (x / w) * d)) : 0; };
+
+function compTime() {
+  const lay = buildLayout();
+  if (!lay.length) return 0;
+  const e = lay[activeItemIdx];
+  if (!e) return totalDur();
+  return e.offset + Math.max(0, video.currentTime - e.item.trimIn);
+}
+
+function clientXtoT(clientX, scrollEl) {
+  const rect = scrollEl.getBoundingClientRect();
+  return Xt(clientX - rect.left + scrollEl.scrollLeft);
+}
 
 function fmt(s) {
+  if (!isFinite(s) || s < 0) s = 0;
   const m  = Math.floor(s / 60);
   const ss = Math.floor(s % 60);
   const ms = Math.floor((s % 1) * 1000);
@@ -226,175 +324,344 @@ function fmtShort(s) {
   if (s < 60) return (s % 1 ? s.toFixed(1) : s.toFixed(0)) + 's';
   return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2,'0')}`;
 }
-// Convert viewport clientX → time, using rulerScroll as reference
-function clientXtoTime(clientX) {
-  const rect = rulerScroll.getBoundingClientRect();
-  return Xt(clientX - rect.left + rulerScroll.scrollLeft);
-}
 
-// ── File load ─────────────────────────────────────────────────────────
-openBtn.addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', e => e.target.files[0] && loadFile(e.target.files[0]));
-previewWrap.addEventListener('dragover', e => { e.preventDefault(); dropOverlay.classList.add('drag-over'); });
+// ── Add clip to library ───────────────────────────────────────────────
+addBtn.addEventListener('click', () => clipInput.click());
+clipInput.addEventListener('change', e => { Array.from(e.target.files).forEach(addClipFile); e.target.value = ''; });
+previewWrap.addEventListener('dragover',  e => { e.preventDefault(); dropOverlay.classList.add('drag-over'); });
 previewWrap.addEventListener('dragleave', () => dropOverlay.classList.remove('drag-over'));
 previewWrap.addEventListener('drop', e => {
   e.preventDefault(); dropOverlay.classList.remove('drag-over');
-  const f = e.dataTransfer.files[0];
-  if (f?.type.startsWith('video/')) loadFile(f);
+  Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('video/')).forEach(addClipFile);
 });
-dropOverlay.addEventListener('click', () => fileInput.click());
+dropOverlay.addEventListener('click', () => clipInput.click());
 
-function loadFile(file) {
-  video.src = URL.createObjectURL(file);
-  dropOverlay.style.display = 'none';
-  video.style.display = 'block';
-  statusEl.textContent = file.name;
-  thumbs = []; wavePeaks = null; serverPath = null;
-  renderBtn.disabled = true;
+function addClipFile(file) {
+  const id  = 'c' + (nextCId++);
+  const url = URL.createObjectURL(file);
+  const pal = PALETTE[(clips.length) % PALETTE.length];
+  const clip = { id, file, url, serverPath: null, duration: 0,
+    name: file.name, ...pal, thumbBitmaps: [], peaks: null };
+  clips.push(clip);
+  renderSidebar();
 
-  video.addEventListener('loadedmetadata', () => {
-    duration = video.duration;
-    trimIn   = 0;
-    trimOut  = duration;
-    setInnerWidths();
-    drawAll();
-    positionHandles();
-    positionPlayhead();
-    extractThumbs();
-    decodeAudio(file);
-    updateTrimUI();
+  // Extract metadata + assets via hidden video element
+  const tv = document.createElement('video');
+  tv.muted = true; tv.preload = 'metadata'; tv.src = url;
+  tv.addEventListener('loadedmetadata', () => {
+    clip.duration = tv.duration;
+    renderSidebar();
+    extractThumbs(clip, tv);
+    decodeAudio(clip, file);
   }, { once: true });
 
-  uploadFile(file);
+  // Preview in player if it's the first clip
+  if (clips.length === 1) {
+    dropOverlay.style.display = 'none';
+    video.style.display = 'block';
+    video.src = url;
+    loadedClipId = id;
+  }
+
+  uploadClip(clip);
 }
 
-// ── Upload to server ──────────────────────────────────────────────────
-function uploadFile(file) {
+function uploadClip(clip) {
   const fd = new FormData();
-  fd.append('video', file);
-  statusEl.textContent = `${file.name} — uploading…`;
+  fd.append('video', clip.file);
   fetch('/upload', { method: 'POST', body: fd })
     .then(r => r.json())
-    .then(({ serverPath: sp }) => {
-      serverPath = sp;
-      statusEl.textContent = file.name;
-      renderBtn.disabled = false;
-    })
-    .catch(() => {
-      statusEl.textContent = `${file.name} (server offline — render unavailable)`;
-    });
+    .then(({ serverPath }) => { clip.serverPath = serverPath; updateRenderBtn(); renderSidebar(); })
+    .catch(() => {});
 }
 
-// ── Resize + inner widths ─────────────────────────────────────────────
-function setInnerWidths() {
-  const w = tlW();
-  [rulerInner, videoInner, audioInner].forEach(el => el.style.width = w + 'px');
-  rulerCanvas.width  = w; rulerCanvas.height = 26;
-  videoCanvas.width  = w; videoCanvas.height = videoInner.clientHeight || 64;
-  audioCanvas.width  = w; audioCanvas.height = audioInner.clientHeight || 64;
+// ── Sidebar rendering ─────────────────────────────────────────────────
+function renderSidebar() {
+  if (!clips.length) {
+    clipList.innerHTML = '<div class="sb-empty">Click <strong style="color:var(--accent)">+</strong> to add video clips,<br/>then add them to the timeline.</div>';
+    return;
+  }
+  clipList.innerHTML = '';
+  clips.forEach(clip => {
+    const inTl = timelineItems.some(i => i.clipId === clip.id);
+    const card = document.createElement('div');
+    card.className = 'clip-card' + (inTl ? ' in-tl' : '') + (clip.serverPath ? '' : ' uploading');
+    card.dataset.id = clip.id;
+
+    // Thumbnail
+    const canvas = document.createElement('canvas');
+    canvas.className = 'clip-thumb';
+    canvas.width = 166; canvas.height = 52;
+    const tc = canvas.getContext('2d');
+    if (clip.thumbBitmaps.length) {
+      tc.drawImage(clip.thumbBitmaps[0].bitmap, 0, 0, 166, 52);
+    } else {
+      tc.fillStyle = '#1a1a1a'; tc.fillRect(0, 0, 166, 52);
+      tc.fillStyle = '#3a3a3a'; tc.font = '11px sans-serif'; tc.textAlign = 'center';
+      tc.fillText(clip.duration ? 'Loading…' : '…', 83, 30);
+    }
+    card.appendChild(canvas);
+
+    // Meta
+    const meta = document.createElement('div');
+    meta.className = 'clip-meta';
+    meta.innerHTML = `<div class="clip-name" title="${clip.name}">${clip.name}</div>
+      <div class="clip-dur">${clip.duration ? fmt(clip.duration) : '…'}</div>`;
+    card.appendChild(meta);
+
+    // Timeline button
+    const btn = document.createElement('button');
+    btn.className = 'clip-btn ' + (inTl ? 'rem' : 'add');
+    btn.textContent = inTl ? '✕  Remove from Timeline' : '+  Add to Timeline';
+    btn.title = inTl ? 'Remove all instances from timeline' : 'Append to end of timeline';
+    btn.addEventListener('click', e => { e.stopPropagation(); inTl ? removeFromTimeline(clip.id) : addToTimeline(clip.id); });
+    card.appendChild(btn);
+
+    // Click card = preview clip
+    card.addEventListener('click', () => previewClip(clip));
+    clipList.appendChild(card);
+  });
 }
 
-window.addEventListener('resize', () => {
-  if (!duration) return;
+function previewClip(clip) {
+  if (!clip.duration) return;
+  if (loadedClipId === clip.id) return;
+  // Only switch preview if clip isn't actively playing on timeline
+  const lay = buildLayout();
+  const activeEntry = lay[activeItemIdx];
+  if (!timelineItems.length || !activeEntry) {
+    video.src = clip.url;
+    video.currentTime = 0;
+    loadedClipId = clip.id;
+    dropOverlay.style.display = 'none';
+    video.style.display = 'block';
+  }
+}
+
+// ── Timeline add / remove ─────────────────────────────────────────────
+function addToTimeline(clipId) {
+  const clip = clips.find(c => c.id === clipId);
+  if (!clip) return;
+  if (!clip.duration) { statusEl.textContent = 'Clip still loading…'; return; }
+
+  timelineItems.push({ id: 'i' + (nextIId++), clipId, trimIn: 0, trimOut: clip.duration });
+
+  if (timelineItems.length === 1) {
+    activeItemIdx = 0;
+    ensureVideoLoaded(clip);
+    video.currentTime = 0;
+  }
+  trimIn  = 0;
+  trimOut = totalDur();
+  onTimelineChanged();
+}
+
+function removeFromTimeline(clipId) {
+  timelineItems = timelineItems.filter(i => i.clipId !== clipId);
+  activeItemIdx = Math.max(0, Math.min(activeItemIdx, timelineItems.length - 1));
+  trimIn  = 0;
+  trimOut = totalDur();
+  if (timelineItems.length) {
+    const lay = buildLayout();
+    ensureVideoLoaded(lay[activeItemIdx].clip);
+  }
+  onTimelineChanged();
+}
+
+function onTimelineChanged() {
   setInnerWidths();
   drawAll();
   positionHandles();
   positionPlayhead();
-});
-
-// ── Scroll sync ───────────────────────────────────────────────────────
-let _syncing = false;
-function syncScroll(src) {
-  if (_syncing) return; _syncing = true;
-  const x = src.scrollLeft;
-  [rulerScroll, videoScroll, audioScroll].forEach(el => { if (el !== src) el.scrollLeft = x; });
-  _syncing = false;
-  positionPlayhead();
-  positionHandles();
+  renderSidebar();
+  updateRenderBtn();
+  splitBtn.disabled = timelineItems.length === 0;
+  const d = totalDur();
+  if (d) { trimInfoEl.style.color = 'var(--dim)'; updateTrimUI(); }
+  else   { trimInfoEl.style.color = '#555'; trimInfoEl.textContent = 'Drag IN / OUT handles to set render region'; }
 }
-rulerScroll.addEventListener('scroll', () => syncScroll(rulerScroll));
-videoScroll.addEventListener('scroll', () => syncScroll(videoScroll));
-audioScroll.addEventListener('scroll', () => syncScroll(audioScroll));
 
-// ── Playhead ──────────────────────────────────────────────────────────
-function positionPlayhead() {
-  if (!duration) return;
-  const x = tX(video.currentTime) + 'px';
-  videoPh.style.left      = x;
-  audioPh.style.left      = x;
-  rulerPhLine.style.left  = x;
-  rulerPhDot.style.left   = x;
+function updateRenderBtn() {
+  renderBtn.disabled = !(
+    timelineItems.length > 0 &&
+    timelineItems.every(i => clips.find(c => c.id === i.clipId)?.serverPath)
+  );
 }
+
+// ── Playback ──────────────────────────────────────────────────────────
+function ensureVideoLoaded(clip) {
+  if (loadedClipId === clip.id) return;
+  video.src = clip.url;
+  loadedClipId = clip.id;
+  dropOverlay.style.display = 'none';
+  video.style.display = 'block';
+}
+
 video.addEventListener('timeupdate', () => {
+  const lay = buildLayout();
+  const e   = lay[activeItemIdx];
+  if (e && video.currentTime >= e.item.trimOut - 0.05) {
+    if (activeItemIdx < lay.length - 1) {
+      activeItemIdx++;
+      const next = lay[activeItemIdx];
+      const wasPlaying = !video.paused;
+      ensureVideoLoaded(next.clip);
+      video.currentTime = next.item.trimIn;
+      if (wasPlaying) video.play().catch(() => {});
+      return;
+    } else {
+      video.pause();
+    }
+  }
   positionPlayhead();
-  timeDisplay.textContent = `${fmt(video.currentTime)} / ${fmt(duration)}`;
+  const ct = compTime(), d = totalDur();
+  timeDisplay.textContent = `${fmt(ct)} / ${fmt(d)}`;
 });
 
-// ── Click-to-seek ─────────────────────────────────────────────────────
-rulerInner.addEventListener('click', e => {
-  if (e.target !== rulerInner && e.target !== rulerCanvas && e.target !== selFill) return;
-  video.currentTime = clientXtoTime(e.clientX);
+function seekToCompTime(ct) {
+  const lay = buildLayout();
+  if (!lay.length) return;
+  let idx = lay.length - 1;
+  for (let i = 0; i < lay.length; i++) {
+    if (ct <= lay[i].offset + lay[i].dur) { idx = i; break; }
+  }
+  activeItemIdx = idx;
+  const e = lay[idx];
+  ensureVideoLoaded(e.clip);
+  video.currentTime = Math.min(e.item.trimIn + Math.max(0, ct - e.offset), e.item.trimOut);
   positionPlayhead();
-});
-function seekFromTrack(e, scrollEl) {
-  const rect = scrollEl.getBoundingClientRect();
-  video.currentTime = Xt(e.clientX - rect.left + scrollEl.scrollLeft);
-  positionPlayhead();
+  timeDisplay.textContent = `${fmt(ct)} / ${fmt(totalDur())}`;
 }
-videoInner.addEventListener('click', e => seekFromTrack(e, videoScroll));
-audioInner.addEventListener('click', e => seekFromTrack(e, audioScroll));
+
+function positionPlayhead() {
+  const x = tX(compTime()) + 'px';
+  videoPh.style.left = x; audioPh.style.left = x;
+  rulerPhLine.style.left = x; rulerPhDot.style.left = x;
+}
+
+// ── Seek on click ─────────────────────────────────────────────────────
+rulerInner.addEventListener('click', e => {
+  if (e.target.classList.contains('trim-handle') || e.target === selFill) return;
+  seekToCompTime(clientXtoT(e.clientX, rulerScroll));
+});
+videoInner.addEventListener('click', e => seekToCompTime(clientXtoT(e.clientX, videoScroll)));
+audioInner.addEventListener('click', e => seekToCompTime(clientXtoT(e.clientX, audioScroll)));
+
+// ── Split ─────────────────────────────────────────────────────────────
+splitBtn.addEventListener('click', doSplit);
+ctxSplitItem.addEventListener('click', () => { doSplit(); ctxMenu.style.display = 'none'; });
+
+function doSplit() {
+  const lay = buildLayout();
+  if (!lay.length) return;
+  const ct = compTime();
+  const e  = lay[activeItemIdx];
+  if (!e || ct <= e.offset + 0.05 || ct >= e.offset + e.dur - 0.05) {
+    statusEl.textContent = 'Playhead must be inside a segment to split';
+    return;
+  }
+  const localT = e.item.trimIn + (ct - e.offset);
+  const idx    = timelineItems.findIndex(i => i.id === e.item.id);
+  const left   = { id: 'i' + (nextIId++), clipId: e.item.clipId, trimIn: e.item.trimIn, trimOut: localT };
+  const right  = { id: 'i' + (nextIId++), clipId: e.item.clipId, trimIn: localT, trimOut: e.item.trimOut };
+  timelineItems.splice(idx, 1, left, right);
+  trimOut = totalDur();
+  statusEl.textContent = 'Split ✓';
+  onTimelineChanged();
+}
+
+// ── Context menu ──────────────────────────────────────────────────────
+function getEntryAt(clientX, scrollEl) {
+  const ct  = clientXtoT(clientX, scrollEl);
+  const lay = buildLayout();
+  return lay.find(e => ct >= e.offset && ct <= e.offset + e.dur) || null;
+}
+
+function showCtxAt(event, entry) {
+  ctxEntry = entry;
+  ctxMenu.style.cssText = `display:block;left:${event.clientX}px;top:${event.clientY}px`;
+  requestAnimationFrame(() => {
+    const r = ctxMenu.getBoundingClientRect();
+    if (r.right  > innerWidth)  ctxMenu.style.left = (event.clientX - r.width)  + 'px';
+    if (r.bottom > innerHeight) ctxMenu.style.top  = (event.clientY - r.height) + 'px';
+  });
+}
+
+videoInner.addEventListener('contextmenu', e => { e.preventDefault(); const en = getEntryAt(e.clientX, videoScroll); if (en) showCtxAt(e, en); });
+audioInner.addEventListener('contextmenu', e => { e.preventDefault(); const en = getEntryAt(e.clientX, audioScroll); if (en) showCtxAt(e, en); });
+document.addEventListener('click', () => ctxMenu.style.display = 'none');
+
+ctxRemoveSeg.addEventListener('click', () => {
+  if (!ctxEntry) return;
+  timelineItems = timelineItems.filter(i => i.id !== ctxEntry.item.id);
+  activeItemIdx = Math.max(0, Math.min(activeItemIdx, timelineItems.length - 1));
+  trimIn = 0; trimOut = totalDur();
+  onTimelineChanged();
+  ctxMenu.style.display = 'none';
+});
 
 // ── Trim handles ──────────────────────────────────────────────────────
-let dragging = null;
-
 function positionHandles() {
-  if (!duration) return;
+  const d = totalDur(); if (!d) return;
   const ix = tX(trimIn), ox = tX(trimOut);
   inHandle.style.left  = ix + 'px';
   outHandle.style.left = ox + 'px';
   selFill.style.left   = ix + 'px';
   selFill.style.width  = (ox - ix) + 'px';
-  // Redraw track canvases to update dim overlay
-  drawVideoTrack();
-  drawAudioTrack();
+  drawVideoTrack(); drawAudioTrack();
 }
-
-inHandle.addEventListener('mousedown',  e => { e.stopPropagation(); dragging = 'in';  });
-outHandle.addEventListener('mousedown', e => { e.stopPropagation(); dragging = 'out'; });
-
-document.addEventListener('mousemove', e => {
-  if (!dragging) return;
-  const t = clientXtoTime(e.clientX);
-  if (dragging === 'in')  trimIn  = Math.min(t, trimOut  - 0.05);
-  if (dragging === 'out') trimOut = Math.max(t, trimIn   + 0.05);
-  positionHandles();
-  updateTrimUI();
-});
-document.addEventListener('mouseup', () => { dragging = null; });
-
 function updateTrimUI() {
-  if (!duration) return;
-  trimInfo.style.color = 'var(--dim)';
-  trimInfo.textContent = `IN ${fmt(trimIn)}  →  OUT ${fmt(trimOut)}  (${fmt(trimOut - trimIn)})`;
+  trimInfoEl.style.color = 'var(--dim)';
+  trimInfoEl.textContent = `IN ${fmt(trimIn)}  →  OUT ${fmt(trimOut)}  (${fmt(trimOut - trimIn)})`;
 }
+inHandle.addEventListener('mousedown',  e => { e.stopPropagation(); dragHandle = 'in'; });
+outHandle.addEventListener('mousedown', e => { e.stopPropagation(); dragHandle = 'out'; });
+document.addEventListener('mousemove', e => {
+  if (!dragHandle) return;
+  const t = clientXtoT(e.clientX, rulerScroll);
+  if (dragHandle === 'in')  trimIn  = Math.min(t, trimOut  - 0.05);
+  if (dragHandle === 'out') trimOut = Math.max(t, trimIn   + 0.05);
+  positionHandles(); updateTrimUI();
+});
+document.addEventListener('mouseup', () => { dragHandle = null; });
 
-// ── Draw ──────────────────────────────────────────────────────────────
+// ── Scroll sync ───────────────────────────────────────────────────────
+let _sync = false;
+function syncScroll(src) {
+  if (_sync) return; _sync = true;
+  const x = src.scrollLeft;
+  [rulerScroll, videoScroll, audioScroll].forEach(el => { if (el !== src) el.scrollLeft = x; });
+  _sync = false;
+  positionPlayhead(); positionHandles();
+}
+rulerScroll.addEventListener('scroll', () => syncScroll(rulerScroll));
+videoScroll.addEventListener('scroll', () => syncScroll(videoScroll));
+audioScroll.addEventListener('scroll', () => syncScroll(audioScroll));
+
+// ── Resize ────────────────────────────────────────────────────────────
+function setInnerWidths() {
+  const w = tlW();
+  [rulerInner, videoInner, audioInner].forEach(el => el.style.width = w + 'px');
+  rulerCanvas.width = w; rulerCanvas.height = 26;
+  videoCanvas.width = w; videoCanvas.height = videoInner.clientHeight || 64;
+  audioCanvas.width = w; audioCanvas.height = audioInner.clientHeight || 64;
+}
+window.addEventListener('resize', () => { setInnerWidths(); drawAll(); positionHandles(); positionPlayhead(); });
+
+// ── Drawing ───────────────────────────────────────────────────────────
 function drawAll() { drawRuler(); drawVideoTrack(); drawAudioTrack(); }
 
 function drawRuler() {
   const ctx = rulerCanvas.getContext('2d');
   const w = rulerCanvas.width, h = rulerCanvas.height;
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = '#252525';
-  ctx.fillRect(0, 0, w, h);
-  if (!duration) return;
-
-  const cands = [0.1, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300];
+  ctx.fillStyle = '#252525'; ctx.fillRect(0, 0, w, h);
+  const d = totalDur(); if (!d) return;
+  const cands = [0.1,.5,1,2,5,10,15,30,60,120,300];
   let interval = cands[cands.length - 1];
-  for (const c of cands) { if ((w / duration) * c >= 55) { interval = c; break; } }
-
+  for (const c of cands) { if ((w / d) * c >= 55) { interval = c; break; } }
   ctx.font = '10px monospace'; ctx.textBaseline = 'middle';
-  for (let t = 0; t <= duration + 0.001; t += interval) {
+  for (let t = 0; t <= d + 0.001; t += interval) {
     const x = tX(t);
     ctx.strokeStyle = '#4a4a4a'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(x, 6); ctx.lineTo(x, h); ctx.stroke();
@@ -402,46 +669,61 @@ function drawRuler() {
   }
 }
 
-// Dim region — drawn on top of track content, outside trimIn..trimOut
 function drawDim(ctx, w, h) {
-  if (!duration) return;
+  const d = totalDur(); if (!d) return;
   ctx.fillStyle = 'rgba(0,0,0,.6)';
   const ix = tX(trimIn), ox = tX(trimOut);
-  if (ix > 0) ctx.fillRect(0, 0, ix, h);
-  if (ox < w) ctx.fillRect(ox, 0, w - ox, h);
-  // cut lines
+  if (ix > 1)     ctx.fillRect(0, 0, ix, h);
+  if (ox < w - 1) ctx.fillRect(ox, 0, w - ox, h);
   ctx.strokeStyle = 'rgba(255,149,0,.75)'; ctx.lineWidth = 1.5;
-  if (ix > 0) { ctx.beginPath(); ctx.moveTo(ix, 0); ctx.lineTo(ix, h); ctx.stroke(); }
-  if (ox < w) { ctx.beginPath(); ctx.moveTo(ox, 0); ctx.lineTo(ox, h); ctx.stroke(); }
+  if (ix > 1)     { ctx.beginPath(); ctx.moveTo(ix, 0); ctx.lineTo(ix, h); ctx.stroke(); }
+  if (ox < w - 1) { ctx.beginPath(); ctx.moveTo(ox, 0); ctx.lineTo(ox, h); ctx.stroke(); }
 }
 
 function drawVideoTrack() {
   const ctx = videoCanvas.getContext('2d');
   const w = videoCanvas.width, h = videoCanvas.height;
   ctx.clearRect(0, 0, w, h);
-  if (!duration) return;
-
-  const bh = Math.floor(h * .55), by = Math.floor((h - bh) / 2);
-  ctx.fillStyle = '#1a2a45';
-  ctx.beginPath(); ctx.roundRect(0, by, w, bh, 4); ctx.fill();
-
-  if (thumbs.length) {
-    const tw = Math.ceil(w / thumbs.length);
-    thumbs.forEach((entry, i) => {
-      const x = tX(entry.time);
-      ctx.save();
-      ctx.beginPath(); ctx.rect(x, by, tw + 1, bh); ctx.clip();
-      ctx.drawImage(entry.bitmap, x, by, tw + 1, bh);
-      ctx.restore();
-      if (i > 0) {
-        ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(x, by); ctx.lineTo(x, by + bh); ctx.stroke();
-      }
-    });
-    ctx.strokeStyle = '#4a8eff'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.roundRect(.5, by + .5, w - 1, bh - 1, 4); ctx.stroke();
+  const lay = buildLayout();
+  if (!lay.length) {
+    ctx.fillStyle = '#1a1a1a'; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#333'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Add clips to the timeline', w / 2, h / 2 + 4);
+    ctx.textAlign = 'start'; return;
   }
-
+  const bh = Math.floor(h * .55), by = Math.floor((h - bh) / 2);
+  lay.forEach((e, segIdx) => {
+    const x1 = tX(e.offset), sw = Math.max(2, tX(e.offset + e.dur) - x1);
+    ctx.fillStyle = e.clip.bg;
+    ctx.beginPath(); ctx.roundRect(x1, by, sw, bh, 3); ctx.fill();
+    if (e.clip.thumbBitmaps.length) {
+      const tw = sw / e.clip.thumbBitmaps.length;
+      e.clip.thumbBitmaps.forEach((t, i) => {
+        ctx.save();
+        ctx.beginPath(); ctx.rect(x1, by, sw, bh); ctx.clip();
+        ctx.drawImage(t.bitmap, x1 + i * tw, by, tw + 1, bh);
+        ctx.restore();
+        if (i > 0) {
+          ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(x1 + i * tw, by); ctx.lineTo(x1 + i * tw, by + bh); ctx.stroke();
+        }
+      });
+    }
+    // Clip name
+    ctx.fillStyle = 'rgba(255,255,255,.8)';
+    ctx.font = '10px sans-serif';
+    const label = e.clip.name.replace(/\.[^.]+$/, '');
+    ctx.save(); ctx.beginPath(); ctx.rect(x1 + 2, by, sw - 4, bh); ctx.clip();
+    ctx.fillText(label, x1 + 5, by + 11); ctx.restore();
+    // Border
+    ctx.strokeStyle = e.clip.border; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.roundRect(x1 + .5, by + .5, sw - 1, bh - 1, 3); ctx.stroke();
+    // Segment divider
+    if (segIdx > 0) {
+      ctx.strokeStyle = '#000a'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x1, by - 2); ctx.lineTo(x1, by + bh + 2); ctx.stroke();
+    }
+  });
   drawDim(ctx, w, h);
 }
 
@@ -449,122 +731,106 @@ function drawAudioTrack() {
   const ctx = audioCanvas.getContext('2d');
   const w = audioCanvas.width, h = audioCanvas.height;
   ctx.clearRect(0, 0, w, h);
-  if (!duration) return;
-
-  if (!wavePeaks) {
-    ctx.fillStyle = '#1a1a1a'; ctx.fillRect(0, 2, w, h - 4);
-    ctx.fillStyle = '#444'; ctx.font = '11px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('Decoding audio…', w / 2, h / 2 + 4);
-    ctx.textAlign = 'start';
-  } else {
-    ctx.fillStyle = '#0f2a1a';
-    ctx.beginPath(); ctx.roundRect(0, 2, w, h - 4, 4); ctx.fill();
-
-    const mid = h / 2, scale = h / 2 - 4;
-    const grad = ctx.createLinearGradient(0, 0, 0, h);
-    grad.addColorStop(0,   'rgba(74,255,142,.5)');
-    grad.addColorStop(.5,  'rgba(74,255,142,.85)');
-    grad.addColorStop(1,   'rgba(74,255,142,.5)');
-    ctx.fillStyle = grad;
-
-    const ratio = w / wavePeaks.length;
-    ctx.beginPath(); ctx.moveTo(0, mid);
-    for (let i = 0; i < wavePeaks.length; i++) ctx.lineTo(i * ratio, mid - wavePeaks[i] * scale);
-    for (let i = wavePeaks.length - 1; i >= 0; i--) ctx.lineTo(i * ratio, mid + wavePeaks[i] * scale);
-    ctx.closePath(); ctx.fill();
-
-    ctx.strokeStyle = '#4aff8e'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.roundRect(.5, 2.5, w - 1, h - 5, 4); ctx.stroke();
-  }
-
+  const lay = buildLayout();
+  if (!lay.length) return;
+  lay.forEach((e, segIdx) => {
+    const x1 = tX(e.offset), sw = Math.max(2, tX(e.offset + e.dur) - x1);
+    ctx.fillStyle = '#0f1f18';
+    ctx.beginPath(); ctx.roundRect(x1, 2, sw, h - 4, 3); ctx.fill();
+    if (e.clip.peaks) {
+      const peaks = e.clip.peaks, cd = e.clip.duration;
+      const s0 = Math.floor((e.item.trimIn / cd) * peaks.length);
+      const s1 = Math.ceil( (e.item.trimOut / cd) * peaks.length);
+      const seg = peaks.slice(s0, Math.min(s1, peaks.length));
+      if (seg.length) {
+        const mid = h / 2, scale = h / 2 - 4, ratio = sw / seg.length;
+        ctx.fillStyle = e.clip.wave;
+        ctx.beginPath(); ctx.moveTo(x1, mid);
+        for (let i = 0; i < seg.length; i++) ctx.lineTo(x1 + i * ratio, mid - seg[i] * scale);
+        for (let i = seg.length - 1; i >= 0; i--) ctx.lineTo(x1 + i * ratio, mid + seg[i] * scale);
+        ctx.closePath(); ctx.fill();
+      }
+    }
+    ctx.strokeStyle = e.clip.border; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.roundRect(x1 + .5, 2.5, sw - 1, h - 5, 3); ctx.stroke();
+    if (segIdx > 0) {
+      ctx.strokeStyle = '#000a'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x1, 0); ctx.lineTo(x1, h); ctx.stroke();
+    }
+  });
   drawDim(ctx, w, h);
 }
 
 // ── Thumbnail extraction ──────────────────────────────────────────────
-function extractThumbs() {
-  thumbs = [];
-  const h   = videoCanvas.height || 64;
-  const MAX = 40; // cap so seeking doesn't take forever
-  const count = Math.min(MAX, Math.max(1, Math.floor(tlW() / 80)));
+function extractThumbs(clip, tv) {
+  const h = 64;
   const off = Object.assign(document.createElement('canvas'), { width: 80, height: h });
   const oc  = off.getContext('2d');
-  const saved = video.currentTime;
   let i = 0;
-
   const next = () => {
-    if (i >= count) {
-      video.onseeked = null;  // must clear or any future seek re-triggers this loop
-      video.currentTime = saved;
-      drawVideoTrack();
-      return;
-    }
-    const t = duration * (i / Math.max(count - 1, 1));
-    video.currentTime = t;
-    video.onseeked = () => {
-      oc.drawImage(video, 0, 0, 80, h);
-      createImageBitmap(off).then(bmp => { thumbs.push({ time: t, bitmap: bmp }); i++; next(); });
+    if (i >= THUMB_N) { tv.onseeked = null; renderSidebar(); drawVideoTrack(); return; }
+    const t = clip.duration * (i / Math.max(THUMB_N - 1, 1));
+    tv.currentTime = t;
+    tv.onseeked = () => {
+      oc.drawImage(tv, 0, 0, 80, h);
+      createImageBitmap(off).then(bmp => { clip.thumbBitmaps.push({ time: t, bitmap: bmp }); i++; next(); });
     };
   };
   next();
 }
 
-// ── Audio waveform ────────────────────────────────────────────────────
-function decodeAudio(file) {
+// ── Audio decode ──────────────────────────────────────────────────────
+function decodeAudio(clip, file) {
   const reader = new FileReader();
   reader.onload = e => {
     const ac = new AudioContext();
-    ac.decodeAudioData(e.target.result)
-      .then(buf => {
-        // Merge channels → mono
-        const len = buf.length, nCh = buf.numberOfChannels;
-        const mono = new Float32Array(len);
-        for (let c = 0; c < nCh; c++) {
-          const ch = buf.getChannelData(c);
-          for (let i = 0; i < len; i++) mono[i] += ch[i] / nCh;
-        }
-        // Downsample to canvas width
-        const W    = audioCanvas.width || 800;
-        const step = Math.max(1, Math.floor(len / W));
-        wavePeaks  = new Float32Array(W);
-        for (let i = 0; i < W; i++) {
-          let max = 0;
-          for (let j = 0; j < step; j++) { const v = Math.abs(mono[i * step + j] || 0); if (v > max) max = v; }
-          wavePeaks[i] = max;
-        }
-        drawAudioTrack();
-        ac.close();
-      })
-      .catch(() => { wavePeaks = null; drawAudioTrack(); });
+    ac.decodeAudioData(e.target.result).then(buf => {
+      const len = buf.length, nCh = buf.numberOfChannels;
+      const mono = new Float32Array(len);
+      for (let c = 0; c < nCh; c++) {
+        const ch = buf.getChannelData(c);
+        for (let i = 0; i < len; i++) mono[i] += ch[i] / nCh;
+      }
+      const step = Math.max(1, Math.floor(len / PEAKS_N));
+      clip.peaks = new Float32Array(PEAKS_N);
+      for (let i = 0; i < PEAKS_N; i++) {
+        let max = 0;
+        for (let j = 0; j < step; j++) { const v = Math.abs(mono[i * step + j] || 0); if (v > max) max = v; }
+        clip.peaks[i] = max;
+      }
+      drawAudioTrack(); ac.close();
+    }).catch(() => { clip.peaks = null; drawAudioTrack(); });
   };
   reader.readAsArrayBuffer(file);
 }
 
 // ── Render ────────────────────────────────────────────────────────────
 renderBtn.addEventListener('click', async () => {
-  if (!serverPath) return;
-  renderBtn.disabled = true;
-  renderBtn.textContent = 'Rendering…';
+  const lay = buildLayout(), d = totalDur();
+  if (!d) return;
+  const items = [];
+  for (const e of lay) {
+    if (e.offset + e.dur <= trimIn || e.offset >= trimOut) continue;
+    if (!e.clip.serverPath) { alert(`"${e.clip.name}" still uploading.`); return; }
+    const start = e.item.trimIn + Math.max(0, trimIn - e.offset);
+    const end   = e.item.trimIn + Math.min(e.dur, trimOut - e.offset);
+    items.push({ serverPath: e.clip.serverPath, start, end });
+  }
+  if (!items.length) { alert('Nothing in the render region.'); return; }
+  renderBtn.disabled = true; renderBtn.textContent = 'Rendering…';
   try {
-    const r = await fetch('/render', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ serverPath, start: trimIn, end: trimOut })
-    });
+    const r = await fetch('/render', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ items }) });
     if (!r.ok) { const { error } = await r.json(); throw new Error(error); }
     const blob = await r.blob();
-    const a = Object.assign(document.createElement('a'),
-      { href: URL.createObjectURL(blob), download: 'render.mp4' });
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'render.mp4' });
     a.click(); URL.revokeObjectURL(a.href);
-  } catch (err) {
-    alert('Render failed:\n' + err.message);
-  }
-  renderBtn.textContent = 'Render Clip';
-  renderBtn.disabled = false;
+  } catch (err) { alert('Render failed:\n' + err.message); }
+  renderBtn.textContent = 'Render'; renderBtn.disabled = false;
 });
 
 // ── Init ──────────────────────────────────────────────────────────────
 setInnerWidths();
+drawAll();
 })();
 </script>
 </body>
