@@ -71,19 +71,32 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 #ruler-canvas,#video-canvas,#audio-canvas{position:absolute;top:0;left:0}
 
 /* Selection + handles */
-#sel-fill{position:absolute;top:0;bottom:0;background:rgba(255,149,0,.12);
-  pointer-events:none;z-index:5}
-.trim-handle{position:absolute;top:0;height:100%;width:14px;
+#sel-fill{position:absolute;top:0;bottom:0;background:rgba(255,149,0,.15);
+  pointer-events:none;z-index:5;border-left:2px solid var(--trim);border-right:2px solid var(--trim)}
+.trim-handle{position:absolute;top:0;height:100%;width:22px;
   cursor:ew-resize;z-index:20;transform:translateX(-50%)}
-.trim-handle::after{content:'';position:absolute;left:6px;top:0;bottom:0;
+/* vertical bar */
+.trim-handle::after{content:'';position:absolute;left:10px;top:0;bottom:0;
   width:2px;border-radius:1px;background:var(--trim)}
+/* label cap */
+.trim-handle::before{
+  content:attr(data-label);
+  position:absolute;top:0;left:50%;transform:translateX(-50%);
+  background:var(--trim);color:#111;
+  font-size:8px;font-weight:800;letter-spacing:.5px;
+  padding:2px 5px;border-radius:0 0 4px 4px;
+  white-space:nowrap;pointer-events:none;line-height:1.4}
+.trim-handle:hover::after,.trim-handle:hover::before{background:#ffbe4a}
 
 /* Playhead */
 .ph-line{position:absolute;top:0;bottom:0;width:1px;
   background:var(--playhead);pointer-events:none;z-index:25}
-.ph-dot{position:absolute;top:2px;width:8px;height:8px;
-  background:var(--playhead);border-radius:50%;
-  transform:translateX(-50%);pointer-events:none;z-index:25}
+/* downward triangle */
+.ph-dot{position:absolute;top:0;
+  width:0;height:0;
+  border-left:5px solid transparent;border-right:5px solid transparent;
+  border-top:9px solid var(--playhead);
+  transform:translateX(-50%);pointer-events:none;z-index:26}
 </style>
 </head>
 <body>
@@ -95,7 +108,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);
   <button class="tb-btn open" id="open-btn">Open File</button>
   <input type="file" id="file-input" accept="video/*"/>
   <span id="status">Drop or open a video file</span>
-  <span id="trim-info"></span>
+  <span id="trim-info" style="color:#555;font-size:11px;font-family:monospace">Drag IN / OUT handles on timeline to set clip</span>
   <span id="time-display">--:--.--- / --:--.---</span>
   <button class="tb-btn render" id="render-btn" disabled>Render Clip</button>
 </div>
@@ -123,8 +136,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);
       <div class="tl-inner" id="ruler-inner">
         <canvas id="ruler-canvas" height="26"></canvas>
         <div id="sel-fill"></div>
-        <div class="trim-handle" id="in-handle"></div>
-        <div class="trim-handle" id="out-handle"></div>
+        <div class="trim-handle" id="in-handle" data-label="IN"></div>
+        <div class="trim-handle" id="out-handle" data-label="OUT"></div>
+        <div class="ph-line" id="ruler-ph-line"></div>
         <div class="ph-dot" id="ruler-ph-dot"></div>
       </div>
     </div>
@@ -175,6 +189,7 @@ const rulerCanvas = $('ruler-canvas');
 const selFill     = $('sel-fill');
 const inHandle    = $('in-handle');
 const outHandle   = $('out-handle');
+const rulerPhLine = $('ruler-ph-line');
 const rulerPhDot  = $('ruler-ph-dot');
 
 const videoScroll = $('video-scroll');
@@ -305,9 +320,10 @@ audioScroll.addEventListener('scroll', () => syncScroll(audioScroll));
 function positionPlayhead() {
   if (!duration) return;
   const x = tX(video.currentTime) + 'px';
-  videoPh.style.left     = x;
-  audioPh.style.left     = x;
-  rulerPhDot.style.left  = x;
+  videoPh.style.left      = x;
+  audioPh.style.left      = x;
+  rulerPhLine.style.left  = x;
+  rulerPhDot.style.left   = x;
 }
 video.addEventListener('timeupdate', () => {
   positionPlayhead();
@@ -358,7 +374,8 @@ document.addEventListener('mouseup', () => { dragging = null; });
 
 function updateTrimUI() {
   if (!duration) return;
-  trimInfo.textContent = `IN ${fmt(trimIn)}  OUT ${fmt(trimOut)}  DUR ${fmt(trimOut - trimIn)}`;
+  trimInfo.style.color = 'var(--dim)';
+  trimInfo.textContent = `IN ${fmt(trimIn)}  →  OUT ${fmt(trimOut)}  (${fmt(trimOut - trimIn)})`;
 }
 
 // ── Draw ──────────────────────────────────────────────────────────────
@@ -476,7 +493,12 @@ function extractThumbs() {
   let i = 0;
 
   const next = () => {
-    if (i >= count) { video.currentTime = saved; drawVideoTrack(); return; }
+    if (i >= count) {
+      video.onseeked = null;  // must clear or any future seek re-triggers this loop
+      video.currentTime = saved;
+      drawVideoTrack();
+      return;
+    }
     const t = duration * (i / Math.max(count - 1, 1));
     video.currentTime = t;
     video.onseeked = () => {
