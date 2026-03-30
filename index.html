@@ -317,6 +317,14 @@ function segAtPt(cx, cy) {
   return null;
 }
 
+function segOverlaps(seg, proposedStart, targetTrackId) {
+  const segEnd = proposedStart + seg.trimOut - seg.trimIn;
+  return segments.some(s => {
+    if (s.id === seg.id || s.trackId !== targetTrackId) return false;
+    return proposedStart < s.startTime + s.trimOut - s.trimIn && segEnd > s.startTime;
+  });
+}
+
 function isOverDelete(seg, cx, cy) {
   const { x1, sw, by } = segRect(seg);
   // clamp to visible area
@@ -530,10 +538,12 @@ function advancePlayback() {
 
 function seekToMasterTime(t) {
   masterTime = t;
-  const vTrack = tracks.find(t => t.type === 'video');
-  if (!vTrack) { positionPlayhead(); return; }
-  const vSegs = segments.filter(s => s.trackId === vTrack.id).sort((a,b) => a.startTime - b.startTime);
-  const seg = vSegs.find(s => t >= s.startTime && t <= s.startTime + s.trimOut - s.trimIn)
+  // Search ALL video tracks (not just the first)
+  const vSegs = segments
+    .filter(s => tracks.find(tr => tr.id === s.trackId)?.type === 'video')
+    .sort((a, b) => a.startTime - b.startTime);
+  if (!vSegs.length) { positionPlayhead(); return; }
+  const seg = vSegs.find(s => t >= s.startTime && t < s.startTime + s.trimOut - s.trimIn)
            || vSegs.find(s => s.startTime >= t)
            || vSegs[vSegs.length - 1];
   if (seg) {
@@ -557,12 +567,15 @@ tracksCanvas.addEventListener('mousemove', e => {
   if (dragState) {
     const seg = segments.find(s => s.id === dragState.segId);
     if (seg) {
-      const deltaX  = e.clientX - dragState.startClientX + (trackScrollEl.scrollLeft - dragState.startScrollLeft);
-      const deltaT  = deltaX / pxPerS();
-      seg.startTime = Math.max(0, dragState.origTime + deltaT);
-      // Cross-track drag
-      const newTrack = getTrackAtY(cy);
-      if (newTrack) seg.trackId = newTrack.id;
+      const deltaX       = e.clientX - dragState.startClientX + (trackScrollEl.scrollLeft - dragState.startScrollLeft);
+      const proposedTime = Math.max(0, dragState.origTime + deltaX / pxPerS());
+      const newTrack     = getTrackAtY(cy);
+      const targetId     = newTrack ? newTrack.id : seg.trackId;
+      // Only apply move if it doesn't overlap another segment on the target track
+      if (!segOverlaps(seg, proposedTime, targetId)) {
+        seg.startTime = proposedTime;
+        seg.trackId   = targetId;
+      }
       drawTracks(); positionHandles();
       timeDisplay.textContent = `${fmt(masterTime)} / ${fmt(totalDur())}`;
     }
@@ -590,6 +603,7 @@ tracksCanvas.addEventListener('mousedown', e => {
   }
   if (isOverDelete(seg, cx, cy)) { deleteSegment(seg.id); return; }
   selectedSegId = seg.id;
+  seekToMasterTime(Xt(cx));
   dragState = { segId: seg.id, startClientX: e.clientX, origTime: seg.startTime, startScrollLeft: trackScrollEl.scrollLeft };
   drawTracks();
   e.preventDefault();
