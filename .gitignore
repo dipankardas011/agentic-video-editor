@@ -1,1 +1,5 @@
 node_modules
+media/
+videoeditor.db
+videoeditor.db-wal
+videoeditor.db-shm

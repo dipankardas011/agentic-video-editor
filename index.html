@@ -323,6 +323,41 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 .ctx-item.danger{color:#cc4444}
 .ctx-item.danger:hover{background:rgba(204,68,68,.1);color:#ff5555}
 .ctx-sep{height:1px;background:var(--border);margin:4px 0}
+
+/* ── Export Modal ────────────────────────────────────────────────────── */
+#export-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);
+  display:none;align-items:center;justify-content:center;z-index:2000;
+  backdrop-filter:blur(4px);
+}
+#export-overlay.show{display:flex}
+#export-modal{
+  background:#1c1c1c;border:1px solid #333;border-radius:14px;
+  padding:28px 32px;min-width:340px;max-width:420px;
+  box-shadow:0 20px 80px rgba(0,0,0,.8);
+}
+#export-modal h3{font-size:15px;font-weight:700;color:#ddd;margin-bottom:20px;letter-spacing:-.2px}
+.export-row{display:flex;align-items:center;margin-bottom:14px;gap:12px}
+.export-row label{flex:0 0 80px;font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.export-row select,.export-row input[type=range]{
+  flex:1;background:#111;border:1px solid #333;color:#ccc;
+  border-radius:6px;padding:7px 10px;font-size:12px;outline:none;
+}
+.export-row select:focus{border-color:var(--accent)}
+.export-row input[type=range]{padding:4px 0;accent-color:var(--accent)}
+.export-row .val{min-width:32px;font-size:11px;color:#666;text-align:right;font-family:monospace}
+.export-actions{display:flex;gap:10px;margin-top:22px;justify-content:flex-end}
+.export-actions button{
+  padding:8px 22px;border-radius:8px;font-size:12px;font-weight:700;
+  cursor:pointer;letter-spacing:.3px;transition:all .15s;
+}
+#export-cancel{background:transparent;border:1px solid #333;color:#888}
+#export-cancel:hover{border-color:#555;color:#ccc}
+#export-go{
+  background:linear-gradient(135deg,rgba(61,255,170,.2),rgba(0,200,120,.1));
+  border:1px solid rgba(61,255,170,.5);color:var(--green);
+}
+#export-go:hover{background:linear-gradient(135deg,rgba(61,255,170,.3),rgba(0,200,120,.15));border-color:rgba(61,255,170,.8);box-shadow:0 0 14px rgba(50,220,140,.2)}
 </style>
 </head>
 <body>
@@ -339,6 +374,12 @@ html,body{height:100%;background:var(--bg);color:var(--text);
   <span id="time-display">--:--.--- / --:--.---</span>
   <div class="tb-sep"></div>
   <div class="tb-actions">
+    <button class="tb-btn" id="undo-btn" disabled title="Undo (Ctrl+Z)">↩ Undo</button>
+    <button class="tb-btn" id="redo-btn" disabled title="Redo (Ctrl+Shift+Z)">↪ Redo</button>
+    <div class="tb-sep"></div>
+    <button class="tb-btn" id="save-btn" title="Save project (Ctrl+S)">&#128190; Save</button>
+    <button class="tb-btn" id="load-btn" title="Load project">&#128194; Load</button>
+    <div class="tb-sep"></div>
     <button class="tb-btn orange" id="split-btn" disabled>✂ Split</button>
     <button class="tb-btn green"  id="render-btn" disabled>&#9660; Render</button>
   </div>
@@ -410,6 +451,51 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 
 </div>
 
+<div id="export-overlay">
+  <div id="export-modal">
+    <h3>Export Settings</h3>
+    <div class="export-row">
+      <label>Format</label>
+      <select id="exp-format">
+        <option value="mp4" selected>MP4 (H.264)</option>
+        <option value="webm">WebM (VP9)</option>
+        <option value="gif">GIF</option>
+      </select>
+    </div>
+    <div class="export-row">
+      <label>Resolution</label>
+      <select id="exp-res">
+        <option value="original" selected>Original</option>
+        <option value="1920:1080">1080p (1920x1080)</option>
+        <option value="1280:720">720p (1280x720)</option>
+        <option value="854:480">480p (854x480)</option>
+        <option value="1080:1920">1080p Vertical (9:16)</option>
+        <option value="1080:1080">Square (1:1)</option>
+      </select>
+    </div>
+    <div class="export-row">
+      <label>Quality</label>
+      <input type="range" id="exp-quality" min="18" max="35" value="23" step="1"/>
+      <span class="val" id="exp-quality-val">23</span>
+    </div>
+    <div class="export-row">
+      <label>Speed</label>
+      <select id="exp-speed">
+        <option value="1">1x (Normal)</option>
+        <option value="0.5">0.5x (Slow)</option>
+        <option value="0.25">0.25x (Very Slow)</option>
+        <option value="1.5">1.5x</option>
+        <option value="2">2x</option>
+        <option value="4">4x (Timelapse)</option>
+      </select>
+    </div>
+    <div class="export-actions">
+      <button id="export-cancel">Cancel</button>
+      <button id="export-go">Export</button>
+    </div>
+  </div>
+</div>
+
 <div id="ctx-menu">
   <div class="ctx-item" id="ctx-split">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="3" x2="6" y2="21"/><line x1="18" y1="3" x2="18" y2="21"/><polyline points="3,9 6,6 9,9"/><polyline points="15,9 18,6 21,9"/></svg>
@@ -430,6 +516,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 const PX_PER_SEC = 120;
 const PEAKS_N    = 1000;
 const THUMB_N    = 20;
+const SNAP_PX    = 8;  // snap threshold in pixels
 const TRACK_H    = { video: 54, audio: 42 };
 const PALETTE    = [
   { bg:'#192a40', border:'#4a8eff', wave:'rgba(74,158,255,.75)' },
@@ -489,6 +576,63 @@ let trimOut      = 0;
 let ctxSeg       = null;
 let nextCId = 1, nextIId = 1, nextTId = 5;
 let loadedClipId = null;
+
+// ── Undo / Redo ───────────────────────────────────────────────────────
+const MAX_HISTORY = 80;
+let history     = [];
+let historyIdx  = -1;
+let _noSnapshot = false;
+
+function snapshot() {
+  if (_noSnapshot) return;
+  const state = {
+    segments: segments.map(s => ({...s})),
+    tracks:   tracks.map(t => ({...t})),
+    trimIn, trimOut, selectedSegId,
+    nextIId, nextTId
+  };
+  // Discard any redo states ahead of current pointer
+  history = history.slice(0, historyIdx + 1);
+  history.push(JSON.stringify(state));
+  if (history.length > MAX_HISTORY) history.shift();
+  historyIdx = history.length - 1;
+  updateUndoRedoBtns();
+}
+
+function restoreState(json) {
+  const state = JSON.parse(json);
+  _noSnapshot = true;
+  segments     = state.segments;
+  tracks       = state.tracks;
+  trimIn       = state.trimIn;
+  trimOut      = state.trimOut;
+  selectedSegId = state.selectedSegId;
+  nextIId      = state.nextIId;
+  nextTId      = state.nextTId;
+  hoveredSegId = null;
+  renderTrackLabels();
+  onTimelineChanged();
+  _noSnapshot = false;
+  updateUndoRedoBtns();
+}
+
+function undo() {
+  if (historyIdx <= 0) return;
+  historyIdx--;
+  restoreState(history[historyIdx]);
+}
+
+function redo() {
+  if (historyIdx >= history.length - 1) return;
+  historyIdx++;
+  restoreState(history[historyIdx]);
+}
+
+function updateUndoRedoBtns() {
+  const undoBtn = $('undo-btn'), redoBtn = $('redo-btn');
+  if (undoBtn) undoBtn.disabled = historyIdx <= 0;
+  if (redoBtn) redoBtn.disabled = historyIdx >= history.length - 1;
+}
 
 // ── Track helpers ──────────────────────────────────────────────────────
 function trackContentH() { return tracks.reduce((s,t) => s + TRACK_H[t.type], 0); }
@@ -555,6 +699,36 @@ function segOverlaps(seg, proposedStart, targetTrackId) {
   });
 }
 
+let snapLineX = null; // for drawing snap indicator
+
+function snapTime(seg, proposedStart) {
+  const dur = seg.trimOut - seg.trimIn;
+  const proposedEnd = proposedStart + dur;
+  const threshold = SNAP_PX / pxPerS();
+  let bestSnap = proposedStart;
+  let bestDist = Infinity;
+
+  // Collect snap targets: other segment edges + playhead + 0
+  const targets = [0, masterTime];
+  for (const s of segments) {
+    if (s.id === seg.id) continue;
+    targets.push(s.startTime); // start edge
+    targets.push(s.startTime + s.trimOut - s.trimIn); // end edge
+  }
+
+  for (const t of targets) {
+    // Snap seg start → target
+    const d1 = Math.abs(proposedStart - t);
+    if (d1 < threshold && d1 < bestDist) { bestDist = d1; bestSnap = t; }
+    // Snap seg end → target
+    const d2 = Math.abs(proposedEnd - t);
+    if (d2 < threshold && d2 < bestDist) { bestDist = d2; bestSnap = t - dur; }
+  }
+
+  snapLineX = bestDist < Infinity ? tX(bestSnap === proposedStart ? bestSnap : bestSnap + dur) : null;
+  return bestSnap;
+}
+
 function isOverDelete(seg, cx, cy) {
   const { x1, sw, by } = segRect(seg);
   // clamp to visible area
@@ -600,10 +774,16 @@ function addClipFile(file) {
 }
 
 function uploadClip(clip) {
-  const fd = new FormData(); fd.append('video', clip.file);
+  const fd = new FormData();
+  fd.append('video', clip.file);
+  fd.append('clipId', clip.id);
   fetch('/upload', { method:'POST', body:fd })
     .then(r => r.json())
-    .then(({ serverPath }) => { clip.serverPath = serverPath; updateRenderBtn(); renderSidebar(); })
+    .then(({ serverPath, mediaUrl }) => {
+      clip.serverPath = serverPath;
+      clip.mediaUrl   = mediaUrl;
+      updateRenderBtn(); renderSidebar();
+    })
     .catch(() => {});
 }
 
@@ -655,6 +835,7 @@ function addTrack(type) {
   const names = { video:'V', audio:'A' };
   const count = tracks.filter(t => t.type === type).length + 1;
   tracks.push({ id: 't' + (nextTId++), type, name: names[type] + count });
+  snapshot();
   renderTrackLabels();
   setInnerWidths();
   drawTracks();
@@ -664,6 +845,7 @@ function removeTrack(trackId) {
   if (tracks.length <= 1) return;
   segments = segments.filter(s => s.trackId !== trackId);
   tracks = tracks.filter(t => t.id !== trackId);
+  snapshot();
   renderTrackLabels();
   onTimelineChanged();
 }
@@ -700,7 +882,7 @@ function addToTimeline(clipId) {
     .filter(s => s.trackId === vTrack.id)
     .reduce((m, s) => Math.max(m, s.startTime + s.trimOut - s.trimIn), 0);
   segments.push({ id:'i'+(nextIId++), clipId, trackId:vTrack.id, startTime:lastEnd, trimIn:0, trimOut:clip.duration });
-
+  snapshot();
   if (segments.length === 1) { ensureVideoLoaded(clip); video.currentTime = 0; playingSegId = segments[0].id; }
   trimIn = 0; trimOut = totalDur();
   onTimelineChanged();
@@ -711,6 +893,7 @@ function removeFromTimeline(clipId) {
   if (playingSegId && !segments.find(s => s.id === playingSegId)) playingSegId = null;
   selectedSegId = null;
   trimIn = 0; trimOut = totalDur();
+  snapshot();
   onTimelineChanged();
 }
 
@@ -720,6 +903,7 @@ function deleteSegment(segId) {
   if (selectedSegId === segId) selectedSegId = null;
   hoveredSegId = null;
   trimIn = 0; trimOut = totalDur();
+  snapshot();
   onTimelineChanged();
 }
 
@@ -802,15 +986,17 @@ tracksCanvas.addEventListener('mousemove', e => {
     const seg = segments.find(s => s.id === dragState.segId);
     if (seg) {
       const deltaX       = e.clientX - dragState.startClientX + (trackScrollEl.scrollLeft - dragState.startScrollLeft);
-      const proposedTime = Math.max(0, dragState.origTime + deltaX / pxPerS());
+      let proposedTime   = Math.max(0, dragState.origTime + deltaX / pxPerS());
       const newTrack     = getTrackAtY(cy);
       const targetId     = newTrack ? newTrack.id : seg.trackId;
+      // Magnetic snap
+      proposedTime = snapTime(seg, proposedTime);
       // Only apply move if it doesn't overlap another segment on the target track
       if (!segOverlaps(seg, proposedTime, targetId)) {
         seg.startTime = proposedTime;
         seg.trackId   = targetId;
       }
-      drawTracks(); positionHandles();
+      drawTracks(); drawSnapLine(); positionHandles();
       timeDisplay.textContent = `${fmt(masterTime)} / ${fmt(totalDur())}`;
     }
     return;
@@ -847,16 +1033,53 @@ document.addEventListener('mouseup', () => {
   if (dragState) {
     // Snap to integer frames optionally — skip for now
     const seg = segments.find(s => s.id === dragState.segId);
-    if (seg) { trimIn = 0; trimOut = totalDur(); updateTrimUI(); }
+    if (seg) { trimIn = 0; trimOut = totalDur(); updateTrimUI(); snapshot(); }
     dragState = null;
+    snapLineX = null;
     drawTracks(); positionHandles();
   }
 });
 
 document.addEventListener('keydown', e => {
-  if ((e.key === 'Delete' || e.key === 'Backspace') && selectedSegId && document.activeElement.tagName !== 'INPUT') {
-    deleteSegment(selectedSegId);
+  const tag = document.activeElement.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+  // Undo / Redo
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'Z' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); redo(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'y') { e.preventDefault(); redo(); return; }
+
+  // Space — play / pause
+  if (e.key === ' ' || e.code === 'Space') {
+    e.preventDefault();
+    if (!segments.length) return;
+    video.paused ? video.play().catch(()=>{}) : video.pause();
+    return;
   }
+
+  // J / K / L — shuttle (rewind / pause / forward)
+  if (e.key === 'j') { video.pause(); seekToMasterTime(Math.max(0, masterTime - 5)); return; }
+  if (e.key === 'k') { video.pause(); return; }
+  if (e.key === 'l') { video.pause(); seekToMasterTime(Math.min(totalDur(), masterTime + 5)); return; }
+
+  // Arrow keys — frame step (~1/30s)
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); video.pause(); seekToMasterTime(Math.max(0, masterTime - (e.shiftKey ? 1 : 1/30))); return; }
+  if (e.key === 'ArrowRight') { e.preventDefault(); video.pause(); seekToMasterTime(Math.min(totalDur(), masterTime + (e.shiftKey ? 1 : 1/30))); return; }
+
+  // Home / End
+  if (e.key === 'Home') { seekToMasterTime(0); return; }
+  if (e.key === 'End')  { seekToMasterTime(totalDur()); return; }
+
+  // Delete / Backspace
+  if ((e.key === 'Delete' || e.key === 'Backspace') && selectedSegId) {
+    deleteSegment(selectedSegId);
+    return;
+  }
+
+  // S — split at playhead
+  if (e.key === 's' && !e.ctrlKey && !e.metaKey) { doSplit(); return; }
+
+  // Escape — deselect
   if (e.key === 'Escape') { selectedSegId = null; drawTracks(); }
 });
 
@@ -1099,6 +1322,18 @@ function drawDim(ctx, w, h) {
   if (ox < w - 1) { ctx.beginPath(); ctx.moveTo(ox,0); ctx.lineTo(ox,h); ctx.stroke(); }
 }
 
+function drawSnapLine() {
+  if (snapLineX === null) return;
+  const ctx = tracksCanvas.getContext('2d');
+  const h = tracksCanvas.height;
+  ctx.save();
+  ctx.setLineDash([4, 3]);
+  ctx.strokeStyle = 'rgba(255,230,0,.7)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(snapLineX, 0); ctx.lineTo(snapLineX, h); ctx.stroke();
+  ctx.restore();
+}
+
 // ── Split ──────────────────────────────────────────────────────────────
 splitBtn.addEventListener('click', doSplit);
 
@@ -1120,6 +1355,7 @@ function doSplit() {
   const right  = { id:'i'+(nextIId++), clipId:seg.clipId, trackId:seg.trackId, startTime:masterTime, trimIn:localT, trimOut:seg.trimOut };
   seg.trimOut  = localT;
   segments.push(right);
+  snapshot();
   statusEl.textContent = 'Split ✓';
   onTimelineChanged();
 }
@@ -1158,7 +1394,26 @@ function decodeAudio(clip, file) {
 }
 
 // ── Render ─────────────────────────────────────────────────────────────
-renderBtn.addEventListener('click', async () => {
+// ── Export modal wiring ────────────────────────────────────────────────
+const exportOverlay = $('export-overlay');
+const expQuality    = $('exp-quality');
+const expQualityVal = $('exp-quality-val');
+expQuality.addEventListener('input', () => expQualityVal.textContent = expQuality.value);
+$('export-cancel').addEventListener('click', () => exportOverlay.classList.remove('show'));
+exportOverlay.addEventListener('click', e => { if (e.target === exportOverlay) exportOverlay.classList.remove('show'); });
+
+renderBtn.addEventListener('click', () => {
+  if (!segments.length) return;
+  exportOverlay.classList.add('show');
+});
+
+$('export-go').addEventListener('click', async () => {
+  exportOverlay.classList.remove('show');
+  const format   = $('exp-format').value;
+  const res      = $('exp-res').value;
+  const quality  = parseInt(expQuality.value);
+  const speed    = parseFloat($('exp-speed').value);
+
   const vTrack = tracks.find(t => t.type === 'video');
   if (!vTrack) return;
   const d = totalDur(); if (!d) return;
@@ -1168,27 +1423,197 @@ renderBtn.addEventListener('click', async () => {
     const end = s.startTime + s.trimOut - s.trimIn;
     if (end <= trimIn || s.startTime >= trimOut) continue;
     const clip = clips.find(c => c.id === s.clipId);
-    if (!clip?.serverPath) { alert(`"${clip?.name}" still uploading.`); return; }
+    if (!clip?.serverPath) { statusEl.textContent = `"${clip?.name}" still uploading.`; return; }
     const start = s.trimIn + Math.max(0, trimIn - s.startTime);
     const stop  = s.trimIn + Math.min(s.trimOut - s.trimIn, trimOut - s.startTime);
     items.push({ serverPath: clip.serverPath, start, end: stop });
   }
-  if (!items.length) { alert('No video segments in render region.'); return; }
+  if (!items.length) { statusEl.textContent = 'No video segments in render region.'; return; }
   renderBtn.disabled = true; renderBtn.textContent = 'Rendering…';
+  const ext = format === 'gif' ? 'gif' : format === 'webm' ? 'webm' : 'mp4';
   try {
-    const r = await fetch('/render', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({items}) });
+    const r = await fetch('/render', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items, format, resolution: res, quality, speed })
+    });
     if (!r.ok) { const { error } = await r.json(); throw new Error(error); }
     const blob = await r.blob();
-    const a = Object.assign(document.createElement('a'), { href:URL.createObjectURL(blob), download:'render.mp4' });
+    const a = Object.assign(document.createElement('a'), { href:URL.createObjectURL(blob), download:`render.${ext}` });
     a.click(); URL.revokeObjectURL(a.href);
-  } catch(err) { alert('Render failed:\n' + err.message); }
-  renderBtn.textContent = 'Render'; renderBtn.disabled = false;
+    statusEl.textContent = 'Export complete';
+  } catch(err) { statusEl.textContent = 'Render failed: ' + err.message; }
+  renderBtn.textContent = '▼ Render'; renderBtn.disabled = false;
 });
+
+// ── Undo / Redo buttons ──────────────────────────────────────────────
+$('undo-btn').addEventListener('click', undo);
+$('redo-btn').addEventListener('click', redo);
+
+// ── Project Save / Load ──────────────────────────────────────────────
+let projectId = crypto.randomUUID ? crypto.randomUUID() : 'p' + Date.now();
+
+$('save-btn').addEventListener('click', saveProject);
+$('load-btn').addEventListener('click', showLoadDialog);
+
+// Ctrl+S to save
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault();
+    saveProject();
+  }
+});
+
+async function saveProject() {
+  statusEl.textContent = 'Saving…';
+  const data = {
+    version: 1,
+    tracks:   tracks.map(t => ({...t})),
+    segments: segments.map(s => ({...s})),
+    clips: clips.map(c => ({
+      id: c.id, name: c.name, duration: c.duration,
+      bg: c.bg, border: c.border, wave: c.wave,
+      serverPath: c.serverPath, mediaUrl: c.mediaUrl
+    })),
+    trimIn, trimOut, masterTime,
+    nextCId, nextIId, nextTId
+  };
+  try {
+    const r = await fetch('/project/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: projectId, name: 'Project', data })
+    });
+    if (!r.ok) throw new Error('Save failed');
+    statusEl.textContent = 'Project saved';
+  } catch (err) {
+    statusEl.textContent = 'Save failed: ' + err.message;
+  }
+}
+
+async function showLoadDialog() {
+  try {
+    const r = await fetch('/project/list');
+    const projects = await r.json();
+    if (!projects.length) { statusEl.textContent = 'No saved projects'; return; }
+
+    // Build a quick picker overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:3000;backdrop-filter:blur(4px)';
+    const modal = document.createElement('div');
+    modal.style.cssText = 'background:#1c1c1c;border:1px solid #333;border-radius:14px;padding:24px 28px;min-width:320px;max-width:400px;max-height:60vh;overflow-y:auto;box-shadow:0 20px 80px rgba(0,0,0,.8)';
+    modal.innerHTML = '<h3 style="font-size:15px;color:#ddd;margin-bottom:16px">Load Project</h3>';
+
+    projects.forEach(p => {
+      const row = document.createElement('div');
+      row.style.cssText = 'padding:10px 12px;border:1px solid #282828;border-radius:8px;margin-bottom:8px;cursor:pointer;transition:all .12s;display:flex;justify-content:space-between;align-items:center';
+      row.innerHTML = `<div><div style="color:#ccc;font-size:13px;font-weight:600">${p.name}</div><div style="color:#555;font-size:10px;margin-top:2px">${p.updated_at}</div></div>`;
+
+      const delBtn = document.createElement('button');
+      delBtn.textContent = '×';
+      delBtn.style.cssText = 'background:transparent;border:none;color:#555;font-size:18px;cursor:pointer;padding:0 4px;transition:color .12s';
+      delBtn.addEventListener('mouseenter', () => delBtn.style.color = '#ff4444');
+      delBtn.addEventListener('mouseleave', () => delBtn.style.color = '#555');
+      delBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await fetch('/project/' + p.id, { method: 'DELETE' });
+        row.remove();
+        if (!modal.querySelector('div[style*="padding:10px"]')) { overlay.remove(); statusEl.textContent = 'No saved projects'; }
+      });
+      row.appendChild(delBtn);
+
+      row.addEventListener('mouseenter', () => { row.style.borderColor = '#4a9eff'; row.style.background = 'rgba(74,158,255,.05)'; });
+      row.addEventListener('mouseleave', () => { row.style.borderColor = '#282828'; row.style.background = 'transparent'; });
+      row.addEventListener('click', () => { overlay.remove(); loadProject(p.id); });
+      modal.appendChild(row);
+    });
+
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+  } catch (err) {
+    statusEl.textContent = 'Failed to list projects: ' + err.message;
+  }
+}
+
+async function loadProject(id) {
+  statusEl.textContent = 'Loading…';
+  try {
+    const r = await fetch('/project/load/' + id);
+    if (!r.ok) throw new Error('Not found');
+    const { data } = await r.json();
+
+    // Reset
+    clips = []; segments = []; tracks = [];
+    selectedSegId = null; hoveredSegId = null; playingSegId = null; loadedClipId = null;
+
+    projectId  = id;
+    tracks     = data.tracks;
+    segments   = data.segments;
+    trimIn     = data.trimIn || 0;
+    trimOut    = data.trimOut || 0;
+    masterTime = data.masterTime || 0;
+    nextCId    = data.nextCId || nextCId;
+    nextIId    = data.nextIId || nextIId;
+    nextTId    = data.nextTId || nextTId;
+
+    // Restore clips — use mediaUrl to load video from server
+    let first = true;
+    for (const sc of (data.clips || [])) {
+      const url = sc.mediaUrl || null;
+      const clip = {
+        id: sc.id, name: sc.name, duration: sc.duration,
+        file: null, url, serverPath: sc.serverPath, mediaUrl: sc.mediaUrl,
+        bg: sc.bg, border: sc.border, wave: sc.wave,
+        thumbBitmaps: [], peaks: null
+      };
+      clips.push(clip);
+
+      if (url) {
+        // Load video element to extract thumbs + audio
+        const tv = document.createElement('video');
+        tv.muted = true; tv.preload = 'metadata'; tv.crossOrigin = 'anonymous'; tv.src = url;
+        tv.addEventListener('loadedmetadata', () => {
+          clip.duration = tv.duration;
+          renderSidebar();
+          extractThumbs(clip, tv);
+          // Decode audio from fetched blob
+          fetch(url).then(r => r.arrayBuffer()).then(buf => {
+            const ac = new AudioContext();
+            ac.decodeAudioData(buf).then(abuf => {
+              const len = abuf.length, nCh = abuf.numberOfChannels, mono = new Float32Array(len);
+              for (let c = 0; c < nCh; c++) { const ch = abuf.getChannelData(c); for (let i = 0; i < len; i++) mono[i] += ch[i] / nCh; }
+              const step = Math.max(1, Math.floor(len / PEAKS_N));
+              clip.peaks = new Float32Array(PEAKS_N);
+              for (let i = 0; i < PEAKS_N; i++) { let mx = 0; for (let j = 0; j < step; j++) { const v = Math.abs(mono[i * step + j] || 0); if (v > mx) mx = v; } clip.peaks[i] = mx; }
+              drawTracks(); ac.close();
+            }).catch(() => {});
+          }).catch(() => {});
+        }, { once: true });
+
+        if (first) {
+          dropOverlay.style.display = 'none';
+          video.style.display = 'block';
+          video.src = url; loadedClipId = clip.id;
+          first = false;
+        }
+      }
+    }
+
+    trimOut = trimOut || totalDur();
+    renderTrackLabels(); onTimelineChanged();
+    snapshot();
+    statusEl.textContent = 'Project loaded';
+  } catch (err) {
+    statusEl.textContent = 'Load failed: ' + err.message;
+  }
+}
 
 // ── Init ───────────────────────────────────────────────────────────────
 renderTrackLabels();
 setInnerWidths();
 drawAll();
+snapshot(); // initial state
 })();
 </script>
 </body>
