@@ -1,0 +1,198 @@
+================================================================================
+                        VIDEOEDITOR — PRODUCT CHECKLIST
+================================================================================
+
+Legend:  [x] Done   [ ] Todo   [~] Partial
+
+
+────────────────────────────────────────────────────────────────────────────────
+  CORE EDITING
+────────────────────────────────────────────────────────────────────────────────
+[x] Video file import (drag-drop + file picker)
+[x] Video preview with play/pause
+[x] Multi-track timeline (video + audio tracks)
+[x] Add/remove tracks dynamically
+[x] Trim (IN/OUT handles on ruler)
+[x] Split at playhead
+[x] Delete segments (click, keyboard, right-click)
+[x] Drag segments horizontally (reposition in time)
+[x] Drag segments across tracks
+[x] Overlap prevention on drag
+[x] Magnetic snap (segment edges + playhead)
+[x] Undo / Redo (Ctrl+Z / Ctrl+Shift+Z, 80-step history)
+[x] Keyboard shortcuts (Space, J/K/L, arrows, S, Home/End)
+[ ] Ripple edit (insert mode — shift subsequent segments)
+[ ] Roll edit (adjust shared edge of two adjacent segments)
+[ ] Slip edit (move content within segment without moving segment)
+[ ] Slide edit (move segment without changing its content timing)
+[ ] Razor tool (click anywhere to split without selecting first)
+[ ] Copy / paste segments (Ctrl+C / Ctrl+V)
+[ ] Duplicate segment (Ctrl+D)
+[ ] Segment lock (prevent accidental moves)
+[~] Track lock / mute / solo (mute + volume done, lock/solo todo)
+[ ] Nested sequences (compound clips)
+
+────────────────────────────────────────────────────────────────────────────────
+  TRANSITIONS
+────────────────────────────────────────────────────────────────────────────────
+[ ] Crossfade / dissolve between adjacent clips
+[ ] Wipe transitions (left, right, up, down)
+[ ] Slide transitions
+[ ] Transition duration control (drag to resize)
+[ ] Transition presets library panel
+[~] Audio crossfade (between audio segments) — per-segment fade in/out done
+
+────────────────────────────────────────────────────────────────────────────────
+  TEXT & TITLES
+────────────────────────────────────────────────────────────────────────────────
+[ ] Add text overlay on timeline
+[ ] Font picker (family, size, weight)
+[ ] Text color, stroke, shadow controls
+[ ] Text position (drag on preview)
+[ ] Text animation (fade in/out, slide, typewriter)
+[ ] Lower thirds template
+[ ] Scrolling credits
+[ ] Subtitle import (.srt / .ass)
+[ ] Subtitle burn-in on export
+
+────────────────────────────────────────────────────────────────────────────────
+  COLOR & EFFECTS
+────────────────────────────────────────────────────────────────────────────────
+[ ] Brightness / contrast / saturation sliders
+[ ] Color wheels (lift / gamma / gain)
+[ ] LUT support (.cube file import)
+[ ] Hue / temperature shift
+[ ] Black & white / sepia presets
+[ ] Chroma key (green screen removal)
+[ ] Blur (gaussian, box)
+[ ] Sharpen
+[ ] Vignette
+[ ] Noise reduction
+[ ] Color presets library
+
+────────────────────────────────────────────────────────────────────────────────
+  TRANSFORM & MOTION
+────────────────────────────────────────────────────────────────────────────────
+[ ] Crop per clip (with preview overlay)
+[ ] Pan & Zoom (Ken Burns effect)
+[ ] Rotation (0-360)
+[ ] Flip horizontal / vertical
+[ ] Picture-in-picture (overlay track with position/scale)
+[ ] Keyframe system (animate any property over time)
+[ ] Motion tracking (stabilization)
+
+────────────────────────────────────────────────────────────────────────────────
+  AUDIO
+────────────────────────────────────────────────────────────────────────────────
+[x] Waveform visualization on timeline
+[x] Volume slider per track
+[x] Mute per track
+[x] Audio fade in / fade out
+[ ] Volume envelope (rubber-band keyframes on waveform)
+[ ] EQ (bass / mid / treble)
+[ ] Compressor / limiter
+[ ] Noise gate
+[ ] Noise reduction (AI or afftdn)
+[ ] Audio detach (separate audio from video)
+[ ] Voiceover recording (mic input directly to track)
+[ ] Audio normalization (loudnorm)
+[ ] Audio speed without pitch change
+
+────────────────────────────────────────────────────────────────────────────────
+  SPEED & TIME
+────────────────────────────────────────────────────────────────────────────────
+[x] Export speed option (0.25x to 4x)
+[ ] Per-segment speed control (with UI on timeline)
+[ ] Reverse playback
+[ ] Freeze frame
+[ ] Time-lapse (high speed)
+[ ] Frame interpolation (smooth slow-mo)
+[ ] Speed ramp (keyframeable speed curve)
+
+────────────────────────────────────────────────────────────────────────────────
+  EXPORT
+────────────────────────────────────────────────────────────────────────────────
+[x] MP4 (H.264) export
+[x] WebM (VP9) export
+[x] GIF export
+[x] Resolution presets (1080p, 720p, 480p, vertical, square)
+[x] Quality slider (CRF)
+[x] Speed option on export
+[ ] Two-pass encoding for target bitrate
+[ ] Audio-only export (MP3 / WAV / AAC)
+[ ] Frame export (single frame as PNG/JPG)
+[ ] Sprite sheet / contact sheet
+[ ] Batch export (multiple presets at once)
+[ ] Export progress bar (real-time ffmpeg progress)
+[ ] Background render (Web Worker)
+[ ] Custom ffmpeg flags (advanced users)
+
+────────────────────────────────────────────────────────────────────────────────
+  PROJECT & FILES
+────────────────────────────────────────────────────────────────────────────────
+[x] Project save to SQLite
+[x] Project load with media restore
+[x] Project list & delete UI
+[x] Persistent media storage (media/ folder)
+[x] Auto-save (periodic, 30s interval)
+[ ] Project rename
+[ ] Project duplicate
+[ ] Media bin (folders, tags, search, favorites)
+[ ] Proxy editing (generate low-res for smooth scrubbing)
+[ ] Import images (as still frames with configurable duration)
+[ ] Import audio-only files (MP3, WAV)
+[ ] Recent projects on startup
+
+────────────────────────────────────────────────────────────────────────────────
+  UI / UX
+────────────────────────────────────────────────────────────────────────────────
+[x] Dark theme
+[x] Sidebar clip library
+[x] Thumbnail preview in sidebar + timeline
+[x] Context menu (right-click)
+[x] Time display (current / total)
+[x] Timeline zoom (Ctrl+scroll, +/- keys)
+[ ] Minimap (overview bar above timeline)
+[ ] Resizable panels (sidebar width, timeline height)
+[x] Fullscreen preview (F key)
+[ ] Keyboard shortcut reference panel (? key)
+[ ] Tooltips on all buttons
+[ ] Responsive / mobile-friendly layout
+[ ] Touch gesture support (tablet editing)
+[ ] Light theme toggle
+[ ] Custom accent color
+[ ] Notification toasts (instead of status bar text)
+[ ] Drag-and-drop reorder tracks
+
+────────────────────────────────────────────────────────────────────────────────
+  AI-POWERED (DIFFERENTIATORS)
+────────────────────────────────────────────────────────────────────────────────
+[ ] Auto-subtitle generation (Whisper WASM)
+[ ] Scene detection (auto-split at cuts)
+[ ] Silence detection & removal
+[ ] Auto-color correction
+[ ] Smart crop (subject tracking)
+[ ] AI background removal
+[ ] Generate B-roll suggestions
+[ ] Auto-reframe (horizontal to vertical)
+
+────────────────────────────────────────────────────────────────────────────────
+  COLLABORATION & CLOUD (FUTURE)
+────────────────────────────────────────────────────────────────────────────────
+[ ] User accounts / auth
+[ ] Cloud project storage
+[ ] Shareable project links
+[ ] Comment threads on timeline markers
+[ ] Version history
+[ ] Google Drive / Dropbox import
+[ ] Direct publish to YouTube / TikTok / Instagram
+
+────────────────────────────────────────────────────────────────────────────────
+  MONETIZATION
+────────────────────────────────────────────────────────────────────────────────
+[ ] Free tier (720p, watermark)
+[ ] Paid tier (4K, no watermark, cloud, AI features)
+[ ] Template marketplace (transitions, LUTs, titles)
+[ ] Plugin / extension system
+
+================================================================================

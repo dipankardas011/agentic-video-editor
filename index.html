@@ -186,6 +186,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 #video-player{
   display:none;max-width:100%;max-height:100%;
   border-radius:5px;background:#000;
+  transition:opacity .05s linear;
   box-shadow:0 20px 100px rgba(0,0,0,.95),0 4px 20px rgba(0,0,0,.6);
   outline:none;position:relative;z-index:1;
 }
@@ -208,7 +209,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);
   border-bottom:1px solid #1c1c1c;
 }
 .label-col{
-  width:90px;flex-shrink:0;
+  width:120px;flex-shrink:0;
   background:linear-gradient(180deg,#1d1d1d 0%,#171717 100%);
   border-right:1px solid #1c1c1c;
   display:flex;align-items:center;justify-content:center;
@@ -217,7 +218,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 }
 #tracks-section{display:flex;overflow:hidden}
 #track-labels-col{
-  width:90px;flex-shrink:0;
+  width:120px;flex-shrink:0;
   background:#111;
   border-right:1px solid #1c1c1c;overflow-y:hidden;
 }
@@ -245,9 +246,26 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 .dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
 .dot-v{background:#4a8eff;box-shadow:0 0 6px rgba(74,142,255,.8)}
 .dot-a{background:#2ec97a;box-shadow:0 0 6px rgba(46,201,122,.8)}
+.tl-track-label .track-controls{
+  display:flex;align-items:center;gap:3px;margin-left:auto;padding-right:4px;
+}
+.tl-track-label .mute-btn{
+  background:transparent;border:none;color:#444;cursor:pointer;
+  font-size:11px;line-height:1;padding:2px;border-radius:3px;transition:all .12s;
+}
+.tl-track-label .mute-btn:hover{color:#ccc}
+.tl-track-label .mute-btn.is-muted{color:#ff4a4a}
+.tl-track-label .vol-slider{
+  width:36px;height:3px;accent-color:var(--accent);cursor:pointer;
+  -webkit-appearance:none;appearance:none;background:#2a2a2a;border-radius:2px;
+}
+.tl-track-label .vol-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;width:8px;height:8px;border-radius:50%;
+  background:var(--accent);cursor:pointer;
+}
 .tl-track-label .remove-track{
-  margin-left:auto;background:transparent;border:none;
-  color:#252525;cursor:pointer;font-size:14px;line-height:1;padding:0 8px 0 0;
+  background:transparent;border:none;
+  color:#252525;cursor:pointer;font-size:14px;line-height:1;padding:0 2px;
   transition:color .12s;
 }
 .tl-track-label .remove-track:hover{color:#cc3333}
@@ -502,6 +520,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);
     Split at playhead
   </div>
   <div class="ctx-sep"></div>
+  <div class="ctx-item" id="ctx-fade-in">Fade In (1s)</div>
+  <div class="ctx-item" id="ctx-fade-out">Fade Out (1s)</div>
+  <div class="ctx-item" id="ctx-fade-clear">Clear Fades</div>
+  <div class="ctx-sep"></div>
   <div class="ctx-item danger" id="ctx-delete">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
     Delete segment
@@ -513,7 +535,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 'use strict';
 
 // ── Constants ──────────────────────────────────────────────────────────
-const PX_PER_SEC = 120;
+let   PX_PER_SEC = 120;
+const PX_MIN = 20, PX_MAX = 500;
 const PEAKS_N    = 1000;
 const THUMB_N    = 20;
 const SNAP_PX    = 8;  // snap threshold in pixels
@@ -559,10 +582,10 @@ const ctxMenu       = $('ctx-menu');
 // ── State ──────────────────────────────────────────────────────────────
 let clips      = [];
 let tracks     = [
-  { id:'v1', type:'video', name:'V1' },
-  { id:'v2', type:'video', name:'V2' },
-  { id:'a1', type:'audio', name:'A1' },
-  { id:'a2', type:'audio', name:'A2' },
+  { id:'v1', type:'video', name:'V1', volume:1, muted:false },
+  { id:'v2', type:'video', name:'V2', volume:1, muted:false },
+  { id:'a1', type:'audio', name:'A1', volume:1, muted:false },
+  { id:'a2', type:'audio', name:'A2', volume:1, muted:false },
 ];
 let segments     = [];   // {id,clipId,trackId,startTime,trimIn,trimOut}
 let masterTime   = 0;
@@ -597,6 +620,7 @@ function snapshot() {
   if (history.length > MAX_HISTORY) history.shift();
   historyIdx = history.length - 1;
   updateUndoRedoBtns();
+  _dirty = true;
 }
 
 function restoreState(json) {
@@ -834,7 +858,7 @@ $('btn-add-a').addEventListener('click', () => addTrack('audio'));
 function addTrack(type) {
   const names = { video:'V', audio:'A' };
   const count = tracks.filter(t => t.type === type).length + 1;
-  tracks.push({ id: 't' + (nextTId++), type, name: names[type] + count });
+  tracks.push({ id: 't' + (nextTId++), type, name: names[type] + count, volume:1, muted:false });
   snapshot();
   renderTrackLabels();
   setInnerWidths();
@@ -860,10 +884,41 @@ function renderTrackLabels() {
     const strip = document.createElement('div'); strip.className = 'track-strip';
     const inner = document.createElement('div'); inner.className = 'track-inner';
     inner.innerHTML = `<span class="dot dot-${isVid ? 'v' : 'a'}"></span><span>${track.name}</span>`;
+
+    const controls = document.createElement('div'); controls.className = 'track-controls';
+
+    // Mute button
+    const muteBtn = document.createElement('button');
+    muteBtn.className = 'mute-btn' + (track.muted ? ' is-muted' : '');
+    muteBtn.textContent = track.muted ? 'M' : 'M';
+    muteBtn.title = track.muted ? 'Unmute' : 'Mute';
+    muteBtn.addEventListener('click', () => {
+      track.muted = !track.muted;
+      applyTrackVolume();
+      renderTrackLabels(); drawTracks();
+    });
+    controls.appendChild(muteBtn);
+
+    // Volume slider
+    const slider = document.createElement('input');
+    slider.type = 'range'; slider.className = 'vol-slider';
+    slider.min = '0'; slider.max = '1'; slider.step = '0.05';
+    slider.value = String(track.volume);
+    slider.title = `Volume: ${Math.round(track.volume * 100)}%`;
+    slider.addEventListener('input', () => {
+      track.volume = parseFloat(slider.value);
+      slider.title = `Volume: ${Math.round(track.volume * 100)}%`;
+      applyTrackVolume();
+    });
+    controls.appendChild(slider);
+
+    // Remove button
     const rmBtn = document.createElement('button');
     rmBtn.className = 'remove-track'; rmBtn.textContent = '×'; rmBtn.title = 'Remove track';
     rmBtn.addEventListener('click', () => removeTrack(track.id));
-    inner.appendChild(rmBtn);
+    controls.appendChild(rmBtn);
+
+    inner.appendChild(controls);
     item.appendChild(strip); item.appendChild(inner);
     labelCol.appendChild(item);
   });
@@ -881,7 +936,7 @@ function addToTimeline(clipId) {
   const lastEnd = segments
     .filter(s => s.trackId === vTrack.id)
     .reduce((m, s) => Math.max(m, s.startTime + s.trimOut - s.trimIn), 0);
-  segments.push({ id:'i'+(nextIId++), clipId, trackId:vTrack.id, startTime:lastEnd, trimIn:0, trimOut:clip.duration });
+  segments.push({ id:'i'+(nextIId++), clipId, trackId:vTrack.id, startTime:lastEnd, trimIn:0, trimOut:clip.duration, fadeIn:0, fadeOut:0 });
   snapshot();
   if (segments.length === 1) { ensureVideoLoaded(clip); video.currentTime = 0; playingSegId = segments[0].id; }
   trimIn = 0; trimOut = totalDur();
@@ -927,30 +982,86 @@ function ensureVideoLoaded(clip) {
   dropOverlay.style.display = 'none'; video.style.display = 'block';
 }
 
+function getTrackVolume() {
+  const seg = segments.find(s => s.id === playingSegId);
+  if (!seg) return 1;
+  const track = tracks.find(t => t.id === seg.trackId);
+  if (!track) return 1;
+  return track.muted ? 0 : track.volume;
+}
+
+function applyFadePreview() {
+  const seg = segments.find(s => s.id === playingSegId);
+  if (!seg) return;
+  const localTime = video.currentTime - seg.trimIn;
+  const segDur = seg.trimOut - seg.trimIn;
+  let fadeMultiplier = 1;
+
+  // Fade in: ramp from 0 to 1 over fadeIn duration
+  if (seg.fadeIn && localTime < seg.fadeIn) {
+    fadeMultiplier = Math.max(0, localTime / seg.fadeIn);
+  }
+  // Fade out: ramp from 1 to 0 over fadeOut duration
+  if (seg.fadeOut && localTime > segDur - seg.fadeOut) {
+    fadeMultiplier = Math.min(fadeMultiplier, Math.max(0, (segDur - localTime) / seg.fadeOut));
+  }
+
+  // Apply to audio volume
+  video.volume = getTrackVolume() * fadeMultiplier;
+  // Apply to video opacity (fade to black)
+  video.style.opacity = fadeMultiplier;
+}
+
+function applyTrackVolume() {
+  video.volume = getTrackVolume();
+  video.style.opacity = 1;
+}
+
 video.addEventListener('timeupdate', () => {
   const seg = segments.find(s => s.id === playingSegId);
   if (!seg) return;
   masterTime = seg.startTime + Math.max(0, video.currentTime - seg.trimIn);
   positionPlayhead();
   timeDisplay.textContent = `${fmt(masterTime)} / ${fmt(totalDur())}`;
+  // Apply fade during playback
+  if (seg.fadeIn || seg.fadeOut) applyFadePreview();
   if (video.currentTime >= seg.trimOut - 0.05) advancePlayback();
 });
 
 function advancePlayback() {
-  const vTrack = tracks.find(t => t.type === 'video');
-  if (!vTrack) return;
-  const vSegs = segments.filter(s => s.trackId === vTrack.id).sort((a,b) => a.startTime - b.startTime);
+  // Search across ALL video tracks, not just the first one
+  const vSegs = segments
+    .filter(s => tracks.find(tr => tr.id === s.trackId)?.type === 'video')
+    .sort((a, b) => a.startTime - b.startTime);
   const idx = vSegs.findIndex(s => s.id === playingSegId);
   if (idx >= 0 && idx < vSegs.length - 1) {
     const next = vSegs[idx + 1];
     playingSegId = next.id;
     const clip = clips.find(c => c.id === next.clipId);
     const wasPlaying = !video.paused;
-    ensureVideoLoaded(clip);
-    video.currentTime = next.trimIn;
-    if (wasPlaying) video.play().catch(() => {});
+    const needsSourceChange = loadedClipId !== clip.id;
+
+    if (needsSourceChange) {
+      // Different source file — need to wait for it to load
+      video.src = clip.url; loadedClipId = clip.id;
+      dropOverlay.style.display = 'none'; video.style.display = 'block';
+      const onReady = () => {
+        video.removeEventListener('canplay', onReady);
+        video.currentTime = next.trimIn;
+        applyTrackVolume();
+        if (wasPlaying) video.play().catch(() => {});
+      };
+      video.addEventListener('canplay', onReady);
+      video.load();
+    } else {
+      // Same source — just seek
+      video.currentTime = next.trimIn;
+      applyTrackVolume();
+      if (wasPlaying) video.play().catch(() => {});
+    }
   } else {
     video.pause();
+    video.style.opacity = 1;
   }
 }
 
@@ -969,6 +1080,7 @@ function seekToMasterTime(t) {
     const clip = clips.find(c => c.id === seg.clipId);
     ensureVideoLoaded(clip);
     video.currentTime = Math.max(seg.trimIn, Math.min(seg.trimOut, seg.trimIn + (t - seg.startTime)));
+    applyTrackVolume();
   }
   positionPlayhead();
   timeDisplay.textContent = `${fmt(t)} / ${fmt(totalDur())}`;
@@ -1079,6 +1191,17 @@ document.addEventListener('keydown', e => {
   // S — split at playhead
   if (e.key === 's' && !e.ctrlKey && !e.metaKey) { doSplit(); return; }
 
+  // +/- or =/- — zoom timeline
+  if (e.key === '=' || e.key === '+') { PX_PER_SEC = Math.min(PX_MAX, PX_PER_SEC * 1.2); setInnerWidths(); drawAll(); positionHandles(); positionPlayhead(); return; }
+  if (e.key === '-')                  { PX_PER_SEC = Math.max(PX_MIN, PX_PER_SEC / 1.2); setInnerWidths(); drawAll(); positionHandles(); positionPlayhead(); return; }
+
+  // F — fullscreen preview
+  if (e.key === 'f' && !e.ctrlKey && !e.metaKey) {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else if (video.style.display !== 'none') video.requestFullscreen().catch(() => {});
+    return;
+  }
+
   // Escape — deselect
   if (e.key === 'Escape') { selectedSegId = null; drawTracks(); }
 });
@@ -1090,6 +1213,9 @@ tracksCanvas.addEventListener('contextmenu', e => {
   const seg = segAtPt(cx, cy);
   if (!seg) return;
   ctxSeg = seg; selectedSegId = seg.id; drawTracks();
+  // Update fade labels
+  $('ctx-fade-in').textContent  = seg.fadeIn  ? 'Remove Fade In'  : 'Fade In (1s)';
+  $('ctx-fade-out').textContent = seg.fadeOut ? 'Remove Fade Out' : 'Fade Out (1s)';
   ctxMenu.style.cssText = `display:block;left:${e.clientX}px;top:${e.clientY}px`;
   requestAnimationFrame(() => {
     const r = ctxMenu.getBoundingClientRect();
@@ -1099,6 +1225,18 @@ tracksCanvas.addEventListener('contextmenu', e => {
 });
 document.addEventListener('click', () => ctxMenu.style.display = 'none');
 $('ctx-split').addEventListener('click', () => { doSplit(); ctxMenu.style.display = 'none'; });
+$('ctx-fade-in').addEventListener('click', () => {
+  if (ctxSeg) { ctxSeg.fadeIn = ctxSeg.fadeIn ? 0 : 1; snapshot(); drawTracks(); }
+  ctxMenu.style.display = 'none';
+});
+$('ctx-fade-out').addEventListener('click', () => {
+  if (ctxSeg) { ctxSeg.fadeOut = ctxSeg.fadeOut ? 0 : 1; snapshot(); drawTracks(); }
+  ctxMenu.style.display = 'none';
+});
+$('ctx-fade-clear').addEventListener('click', () => {
+  if (ctxSeg) { ctxSeg.fadeIn = 0; ctxSeg.fadeOut = 0; snapshot(); drawTracks(); }
+  ctxMenu.style.display = 'none';
+});
 $('ctx-delete').addEventListener('click', () => { if (ctxSeg) deleteSegment(ctxSeg.id); ctxMenu.style.display = 'none'; });
 
 // Seek from ruler
@@ -1128,6 +1266,28 @@ function setInnerWidths() {
   tracksInner.style.height = h + 'px';
 }
 window.addEventListener('resize', () => { setInnerWidths(); drawAll(); positionHandles(); positionPlayhead(); });
+
+// ── Timeline zoom (Ctrl + scroll wheel) ──────────────────────────────
+function handleZoom(e) {
+  if (!e.ctrlKey && !e.metaKey) return;
+  e.preventDefault();
+  const rect = trackScrollEl.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left + trackScrollEl.scrollLeft;
+  const timeBefore = Xt(mouseX);
+
+  const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+  PX_PER_SEC = Math.max(PX_MIN, Math.min(PX_MAX, PX_PER_SEC * factor));
+
+  setInnerWidths(); drawAll();
+  // Keep the time under the cursor in the same screen position
+  const newX = tX(timeBefore);
+  const scrollTo = newX - (e.clientX - rect.left);
+  trackScrollEl.scrollLeft = scrollTo;
+  rulerScroll.scrollLeft = scrollTo;
+  positionHandles(); positionPlayhead();
+}
+trackScrollEl.addEventListener('wheel', handleZoom, { passive: false });
+rulerScroll.addEventListener('wheel', handleZoom, { passive: false });
 
 // ── Trim handles ───────────────────────────────────────────────────────
 function positionHandles() {
@@ -1215,6 +1375,14 @@ function drawTracks() {
       ctx.fillText('Drop clips here', w/2, y + th/2 + 4);
       ctx.textAlign = 'start';
     }
+    // Dim overlay for muted tracks
+    if (track.muted) {
+      ctx.fillStyle = 'rgba(0,0,0,.4)';
+      ctx.fillRect(0, y, w, th);
+      ctx.fillStyle = 'rgba(255,74,74,.5)'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('MUTED', 40, y + th/2 + 3);
+      ctx.textAlign = 'start';
+    }
     y += th;
   });
 
@@ -1289,6 +1457,47 @@ function drawSegment(ctx, seg) {
     ctx.fillText(clip.name.replace(/\.[^.]+$/,''), x1+5, by+12); ctx.restore();
   }
 
+  // Fade indicators — dark triangle + bright diagonal line + label
+  const fadeInPx  = (seg.fadeIn  || 0) * pxPerS();
+  const fadeOutPx = (seg.fadeOut || 0) * pxPerS();
+  if (fadeInPx > 2) {
+    // Dark triangle covering the faded region
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x1, by, sw, bh); ctx.clip();
+    ctx.fillStyle = 'rgba(0,0,0,.55)';
+    ctx.beginPath(); ctx.moveTo(x1, by); ctx.lineTo(x1+fadeInPx, by); ctx.lineTo(x1, by+bh); ctx.closePath(); ctx.fill();
+    // Bright diagonal line
+    ctx.strokeStyle = '#ffcc00'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x1, by+bh); ctx.lineTo(x1+fadeInPx, by); ctx.stroke();
+    // Handle dot at top
+    ctx.fillStyle = '#ffcc00';
+    ctx.beginPath(); ctx.arc(x1+fadeInPx, by, 3, 0, Math.PI*2); ctx.fill();
+    // Label
+    if (fadeInPx > 20) {
+      ctx.fillStyle = '#ffcc00'; ctx.font = 'bold 8px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('FI', x1 + fadeInPx/2, by + bh/2 + 3);
+      ctx.textAlign = 'start';
+    }
+    ctx.restore();
+  }
+  if (fadeOutPx > 2) {
+    const x2 = x1 + sw;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x1, by, sw, bh); ctx.clip();
+    ctx.fillStyle = 'rgba(0,0,0,.55)';
+    ctx.beginPath(); ctx.moveTo(x2, by); ctx.lineTo(x2-fadeOutPx, by); ctx.lineTo(x2, by+bh); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#ffcc00'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x2-fadeOutPx, by); ctx.lineTo(x2, by+bh); ctx.stroke();
+    ctx.fillStyle = '#ffcc00';
+    ctx.beginPath(); ctx.arc(x2-fadeOutPx, by, 3, 0, Math.PI*2); ctx.fill();
+    if (fadeOutPx > 20) {
+      ctx.fillStyle = '#ffcc00'; ctx.font = 'bold 8px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('FO', x2 - fadeOutPx/2, by + bh/2 + 3);
+      ctx.textAlign = 'start';
+    }
+    ctx.restore();
+  }
+
   // Border
   ctx.strokeStyle = isSel ? '#fff' : clip.border;
   ctx.lineWidth   = isSel ? 2 : 1.5;
@@ -1352,8 +1561,9 @@ function doSplit() {
   }
   if (!seg) { statusEl.textContent = 'Playhead must be inside a segment to split'; return; }
   const localT = seg.trimIn + (masterTime - seg.startTime);
-  const right  = { id:'i'+(nextIId++), clipId:seg.clipId, trackId:seg.trackId, startTime:masterTime, trimIn:localT, trimOut:seg.trimOut };
+  const right  = { id:'i'+(nextIId++), clipId:seg.clipId, trackId:seg.trackId, startTime:masterTime, trimIn:localT, trimOut:seg.trimOut, fadeIn:0, fadeOut:seg.fadeOut };
   seg.trimOut  = localT;
+  seg.fadeOut   = 0;
   segments.push(right);
   snapshot();
   statusEl.textContent = 'Split ✓';
@@ -1426,7 +1636,9 @@ $('export-go').addEventListener('click', async () => {
     if (!clip?.serverPath) { statusEl.textContent = `"${clip?.name}" still uploading.`; return; }
     const start = s.trimIn + Math.max(0, trimIn - s.startTime);
     const stop  = s.trimIn + Math.min(s.trimOut - s.trimIn, trimOut - s.startTime);
-    items.push({ serverPath: clip.serverPath, start, end: stop });
+    const track = tracks.find(t => t.id === s.trackId);
+    const vol = (track?.muted) ? 0 : (track?.volume ?? 1);
+    items.push({ serverPath: clip.serverPath, start, end: stop, volume: vol, fadeIn: s.fadeIn || 0, fadeOut: s.fadeOut || 0 });
   }
   if (!items.length) { statusEl.textContent = 'No video segments in render region.'; return; }
   renderBtn.disabled = true; renderBtn.textContent = 'Rendering…';
@@ -1452,6 +1664,9 @@ $('redo-btn').addEventListener('click', redo);
 
 // ── Project Save / Load ──────────────────────────────────────────────
 let projectId = crypto.randomUUID ? crypto.randomUUID() : 'p' + Date.now();
+let _dirty = false;
+let _autoSaveTimer = null;
+const AUTO_SAVE_INTERVAL = 30000; // 30 seconds
 
 $('save-btn').addEventListener('click', saveProject);
 $('load-btn').addEventListener('click', showLoadDialog);
@@ -1485,11 +1700,25 @@ async function saveProject() {
       body: JSON.stringify({ id: projectId, name: 'Project', data })
     });
     if (!r.ok) throw new Error('Save failed');
+    _dirty = false;
     statusEl.textContent = 'Project saved';
   } catch (err) {
     statusEl.textContent = 'Save failed: ' + err.message;
   }
 }
+
+// Auto-save every 30s when dirty
+function startAutoSave() {
+  if (_autoSaveTimer) return;
+  _autoSaveTimer = setInterval(() => {
+    if (_dirty && segments.length > 0) {
+      saveProject().then(() => {
+        statusEl.textContent = 'Auto-saved';
+      });
+    }
+  }, AUTO_SAVE_INTERVAL);
+}
+startAutoSave();
 
 async function showLoadDialog() {
   try {
