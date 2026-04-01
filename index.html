@@ -376,6 +376,47 @@ html,body{height:100%;background:var(--bg);color:var(--text);
   border:1px solid rgba(61,255,170,.5);color:var(--green);
 }
 #export-go:hover{background:linear-gradient(135deg,rgba(61,255,170,.3),rgba(0,200,120,.15));border-color:rgba(61,255,170,.8);box-shadow:0 0 14px rgba(50,220,140,.2)}
+/* ── Text overlay editor ───────────────────────────────────────────── */
+#text-editor-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);
+  display:none;align-items:center;justify-content:center;z-index:2000;
+  backdrop-filter:blur(4px);
+}
+#text-editor-overlay.show{display:flex}
+#text-editor-modal{
+  background:#1c1c1c;border:1px solid #333;border-radius:14px;
+  padding:28px 32px;min-width:380px;max-width:480px;
+  box-shadow:0 20px 80px rgba(0,0,0,.8);
+}
+#text-editor-modal h3{font-size:15px;font-weight:700;color:#ddd;margin-bottom:20px;letter-spacing:-.2px}
+.te-row{display:flex;align-items:center;margin-bottom:12px;gap:12px}
+.te-row label{flex:0 0 70px;font-size:11px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.te-row input,.te-row select,.te-row textarea{
+  flex:1;background:#111;border:1px solid #333;color:#ccc;
+  border-radius:6px;padding:7px 10px;font-size:12px;outline:none;font-family:inherit;
+}
+.te-row textarea{height:60px;resize:vertical}
+.te-row input[type=color]{width:40px;height:30px;padding:2px;cursor:pointer;flex:0 0 40px}
+.te-row input:focus,.te-row select:focus,.te-row textarea:focus{border-color:var(--accent)}
+.te-actions{display:flex;gap:10px;margin-top:18px;justify-content:flex-end}
+.te-actions button{
+  padding:8px 22px;border-radius:8px;font-size:12px;font-weight:700;
+  cursor:pointer;letter-spacing:.3px;transition:all .15s;
+}
+#te-cancel{background:transparent;border:1px solid #333;color:#888}
+#te-cancel:hover{border-color:#555;color:#ccc}
+#te-ok{
+  background:linear-gradient(135deg,rgba(74,158,255,.2),rgba(40,120,220,.1));
+  border:1px solid rgba(74,158,255,.5);color:var(--accent);
+}
+#te-ok:hover{background:linear-gradient(135deg,rgba(74,158,255,.3),rgba(40,120,220,.15));border-color:rgba(74,158,255,.8);box-shadow:0 0 14px rgba(74,158,255,.2)}
+
+/* ── Export progress ───────────────────────────────────────────────── */
+#export-progress{display:none;margin-top:18px}
+#export-progress.show{display:block}
+#export-progress-label{font-size:11px;color:#888;margin-bottom:6px;display:flex;justify-content:space-between}
+#export-progress-bar{height:6px;background:#222;border-radius:3px;overflow:hidden}
+#export-progress-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--accent));border-radius:3px;transition:width .2s}
 </style>
 </head>
 <body>
@@ -399,6 +440,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);
     <button class="tb-btn" id="load-btn" title="Load project">&#128194; Load</button>
     <div class="tb-sep"></div>
     <button class="tb-btn orange" id="split-btn" disabled>✂ Split</button>
+    <button class="tb-btn" id="add-text-btn" title="Add text overlay (T)">T Text</button>
     <button class="tb-btn green"  id="render-btn" disabled>&#9660; Render</button>
   </div>
 </div>
@@ -417,7 +459,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);
         <p>Click <strong>+</strong> to add clips,<br/>then add them to the timeline.</p>
       </div>
     </div>
-    <input type="file" id="clip-input" accept="video/*" multiple/>
+    <input type="file" id="clip-input" accept="video/*,image/*" multiple/>
   </div>
 
   <div id="preview-wrap">
@@ -427,11 +469,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
           <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
         </svg>
-        <p>Drop video files here</p>
+        <p>Drop video or image files here</p>
         <small>or use the + button in the sidebar</small>
       </div>
     </div>
     <video id="video-player" controls></video>
+    <img id="image-preview" style="display:none;max-width:100%;max-height:100%;border-radius:5px;background:#000;box-shadow:0 20px 100px rgba(0,0,0,.95);position:relative;z-index:1;object-fit:contain"/>
+    <div id="text-preview" style="position:absolute;z-index:2;pointer-events:none;display:none;text-shadow:2px 2px 6px rgba(0,0,0,.8);font-weight:700;white-space:pre-line;text-align:center"></div>
   </div>
 </div>
 
@@ -483,12 +527,10 @@ html,body{height:100%;background:var(--bg);color:var(--text);
     <div class="export-row">
       <label>Resolution</label>
       <select id="exp-res">
-        <option value="original" selected>Original</option>
-        <option value="1920:1080">1080p (1920x1080)</option>
-        <option value="1280:720">720p (1280x720)</option>
-        <option value="854:480">480p (854x480)</option>
-        <option value="1080:1920">1080p Vertical (9:16)</option>
-        <option value="1080:1080">Square (1:1)</option>
+        <option value="4k">4K (3840x2160)</option>
+        <option value="2k">2K (2560x1440)</option>
+        <option value="fhd" selected>Full HD (1920x1080)</option>
+        <option value="720p">720p (1280x720)</option>
       </select>
     </div>
     <div class="export-row">
@@ -507,9 +549,38 @@ html,body{height:100%;background:var(--bg);color:var(--text);
         <option value="4">4x (Timelapse)</option>
       </select>
     </div>
+    <div id="export-progress">
+      <div id="export-progress-label"><span id="export-progress-text">Rendering...</span><span id="export-progress-pct">0%</span></div>
+      <div id="export-progress-bar"><div id="export-progress-fill"></div></div>
+    </div>
     <div class="export-actions">
       <button id="export-cancel">Cancel</button>
       <button id="export-go">Export</button>
+    </div>
+  </div>
+</div>
+
+<div id="text-editor-overlay">
+  <div id="text-editor-modal">
+    <h3 id="te-title">Add Text Overlay</h3>
+    <div class="te-row"><label>Text</label><textarea id="te-text" placeholder="Enter text..."></textarea></div>
+    <div class="te-row"><label>Font Size</label><input type="range" id="te-size" min="16" max="120" value="48" step="2"/><span class="val" id="te-size-val">48</span></div>
+    <div class="te-row"><label>Color</label><input type="color" id="te-color" value="#ffffff"/></div>
+    <div class="te-row"><label>Position</label>
+      <select id="te-pos">
+        <option value="center">Center</option>
+        <option value="top">Top</option>
+        <option value="bottom">Bottom</option>
+        <option value="top-left">Top Left</option>
+        <option value="top-right">Top Right</option>
+        <option value="bottom-left">Bottom Left</option>
+        <option value="bottom-right">Bottom Right</option>
+      </select>
+    </div>
+    <div class="te-row"><label>Duration</label><input type="number" id="te-dur" min="0.5" max="60" step="0.5" value="3"/><span style="font-size:11px;color:#666">seconds</span></div>
+    <div class="te-actions">
+      <button id="te-cancel">Cancel</button>
+      <button id="te-ok">OK</button>
     </div>
   </div>
 </div>
@@ -524,10 +595,36 @@ html,body{height:100%;background:var(--bg);color:var(--text);
   <div class="ctx-item" id="ctx-fade-out">Fade Out (1s)</div>
   <div class="ctx-item" id="ctx-fade-clear">Clear Fades</div>
   <div class="ctx-sep"></div>
+  <div class="ctx-item" id="ctx-xfade" style="position:relative">
+    Transition ▸
+    <div id="ctx-xfade-sub" style="display:none;position:absolute;left:100%;top:-5px;background:#1c1c1c;border:1px solid #333;border-radius:8px;padding:5px 0;min-width:130px;box-shadow:0 8px 40px rgba(0,0,0,.75)">
+      <div class="ctx-item" data-xfade="0">None</div>
+      <div class="ctx-item" data-xfade="0.5">Dissolve 0.5s</div>
+      <div class="ctx-item" data-xfade="1">Dissolve 1s</div>
+      <div class="ctx-item" data-xfade="1.5">Dissolve 1.5s</div>
+      <div class="ctx-item" data-xfade="2">Dissolve 2s</div>
+    </div>
+  </div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" id="ctx-speed" style="position:relative">
+    Speed ▸
+    <div id="ctx-speed-sub" style="display:none;position:absolute;left:100%;top:-5px;background:#1c1c1c;border:1px solid #333;border-radius:8px;padding:5px 0;min-width:110px;box-shadow:0 8px 40px rgba(0,0,0,.75)">
+      <div class="ctx-item" data-speed="0.25">0.25x</div>
+      <div class="ctx-item" data-speed="0.5">0.5x</div>
+      <div class="ctx-item" data-speed="1">1x (Normal)</div>
+      <div class="ctx-item" data-speed="1.5">1.5x</div>
+      <div class="ctx-item" data-speed="2">2x</div>
+      <div class="ctx-item" data-speed="4">4x</div>
+    </div>
+  </div>
+  <div class="ctx-sep"></div>
   <div class="ctx-item danger" id="ctx-delete">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
     Delete segment
   </div>
+  <div class="ctx-sep" id="ctx-text-sep" style="display:none"></div>
+  <div class="ctx-item" id="ctx-edit-text" style="display:none">Edit Text</div>
+  <div class="ctx-item danger" id="ctx-del-text" style="display:none">Delete Text Overlay</div>
 </div>
 
 <script>
@@ -600,6 +697,10 @@ let ctxSeg       = null;
 let nextCId = 1, nextIId = 1, nextTId = 5;
 let loadedClipId = null;
 
+// ── Text overlays ─────────────────────────────────────────────────────
+let textOverlays = []; // {id, text, fontSize, color, position, startTime, duration}
+let nextTextId = 1;
+
 // ── Undo / Redo ───────────────────────────────────────────────────────
 const MAX_HISTORY = 80;
 let history     = [];
@@ -611,8 +712,9 @@ function snapshot() {
   const state = {
     segments: segments.map(s => ({...s})),
     tracks:   tracks.map(t => ({...t})),
+    textOverlays: textOverlays.map(t => ({...t})),
     trimIn, trimOut, selectedSegId,
-    nextIId, nextTId
+    nextIId, nextTId, nextTextId
   };
   // Discard any redo states ahead of current pointer
   history = history.slice(0, historyIdx + 1);
@@ -628,11 +730,13 @@ function restoreState(json) {
   _noSnapshot = true;
   segments     = state.segments;
   tracks       = state.tracks;
+  textOverlays = state.textOverlays || [];
   trimIn       = state.trimIn;
   trimOut      = state.trimOut;
   selectedSegId = state.selectedSegId;
   nextIId      = state.nextIId;
   nextTId      = state.nextTId;
+  nextTextId   = state.nextTextId || nextTextId;
   hoveredSegId = null;
   renderTrackLabels();
   onTimelineChanged();
@@ -674,7 +778,7 @@ function getTrackAtY(y) {
 // ── Timeline geometry ──────────────────────────────────────────────────
 function totalDur() {
   if (!segments.length) return 0;
-  return segments.reduce((m, s) => Math.max(m, s.startTime + s.trimOut - s.trimIn), 0);
+  return segments.reduce((m, s) => Math.max(m, s.startTime + segDur(s)), 0);
 }
 const tlW    = () => Math.max(rulerScroll.clientWidth || 600, Math.ceil(totalDur() * PX_PER_SEC));
 const tX     = t  => { const d = totalDur(), w = tlW(); return (d && w) ? (t / d) * w : 0; };
@@ -696,12 +800,14 @@ function fmtShort(s) {
 }
 
 // ── Segment geometry helpers ───────────────────────────────────────────
+function segDur(seg) { return (seg.trimOut - seg.trimIn) / (seg.speed || 1); }
+
 function segRect(seg) {
   const ty  = getTrackY(seg.trackId);
   const th  = TRACK_H[tracks.find(t => t.id === seg.trackId)?.type || 'video'];
   const pad = 2;
   const x1  = tX(seg.startTime);
-  const sw  = Math.max(4, tX(seg.startTime + seg.trimOut - seg.trimIn) - x1);
+  const sw  = Math.max(4, tX(seg.startTime + segDur(seg)) - x1);
   return { x1, sw, by: ty + pad, bh: th - pad * 2, ty, th };
 }
 
@@ -716,17 +822,17 @@ function segAtPt(cx, cy) {
 }
 
 function segOverlaps(seg, proposedStart, targetTrackId) {
-  const segEnd = proposedStart + seg.trimOut - seg.trimIn;
+  const segEnd = proposedStart + segDur(seg);
   return segments.some(s => {
     if (s.id === seg.id || s.trackId !== targetTrackId) return false;
-    return proposedStart < s.startTime + s.trimOut - s.trimIn && segEnd > s.startTime;
+    return proposedStart < s.startTime + segDur(s) && segEnd > s.startTime;
   });
 }
 
 let snapLineX = null; // for drawing snap indicator
 
 function snapTime(seg, proposedStart) {
-  const dur = seg.trimOut - seg.trimIn;
+  const dur = segDur(seg);
   const proposedEnd = proposedStart + dur;
   const threshold = SNAP_PX / pxPerS();
   let bestSnap = proposedStart;
@@ -737,7 +843,7 @@ function snapTime(seg, proposedStart) {
   for (const s of segments) {
     if (s.id === seg.id) continue;
     targets.push(s.startTime); // start edge
-    targets.push(s.startTime + s.trimOut - s.trimIn); // end edge
+    targets.push(s.startTime + segDur(s)); // end edge
   }
 
   for (const t of targets) {
@@ -768,7 +874,7 @@ previewWrap.addEventListener('dragover',  e => { e.preventDefault(); dropOverlay
 previewWrap.addEventListener('dragleave', () => dropOverlay.classList.remove('drag-over'));
 previewWrap.addEventListener('drop', e => {
   e.preventDefault(); dropOverlay.classList.remove('drag-over');
-  Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('video/')).forEach(addClipFile);
+  Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('video/') || f.type.startsWith('image/')).forEach(addClipFile);
 });
 dropOverlay.addEventListener('click', () => clipInput.click());
 
@@ -776,20 +882,41 @@ function addClipFile(file) {
   const id  = 'c' + (nextCId++);
   const url = URL.createObjectURL(file);
   const pal = PALETTE[(clips.length) % PALETTE.length];
-  const clip = { id, file, url, serverPath:null, duration:0, name:file.name, ...pal, thumbBitmaps:[], peaks:null };
+  const isImage = file.type.startsWith('image/');
+  const clip = { id, file, url, serverPath:null, duration:0, name:file.name, ...pal, thumbBitmaps:[], peaks:null, isImage };
   clips.push(clip);
   renderSidebar();
 
-  const tv = document.createElement('video');
-  tv.muted = true; tv.preload = 'metadata'; tv.src = url;
-  tv.addEventListener('loadedmetadata', () => {
-    clip.duration = tv.duration;
-    renderSidebar();
-    extractThumbs(clip, tv);
-    decodeAudio(clip, file);
-  }, { once: true });
+  if (isImage) {
+    // Image clip — default 5 seconds still frame
+    const img = new Image();
+    img.onload = () => {
+      clip.duration = 5;
+      clip.imgWidth = img.naturalWidth;
+      clip.imgHeight = img.naturalHeight;
+      // Generate single thumbnail bitmap
+      const off = Object.assign(document.createElement('canvas'), { width:80, height:56 });
+      const oc = off.getContext('2d');
+      oc.drawImage(img, 0, 0, 80, 56);
+      createImageBitmap(off).then(bmp => {
+        clip.thumbBitmaps = [{ bitmap: bmp }];
+        renderSidebar(); drawTracks();
+      });
+      renderSidebar();
+    };
+    img.src = url;
+  } else {
+    const tv = document.createElement('video');
+    tv.muted = true; tv.preload = 'metadata'; tv.src = url;
+    tv.addEventListener('loadedmetadata', () => {
+      clip.duration = tv.duration;
+      renderSidebar();
+      extractThumbs(clip, tv);
+      decodeAudio(clip, file);
+    }, { once: true });
+  }
 
-  if (clips.length === 1) {
+  if (clips.length === 1 && !isImage) {
     dropOverlay.style.display = 'none';
     video.style.display = 'block';
     video.src = url; loadedClipId = id;
@@ -830,7 +957,7 @@ function renderSidebar() {
     card.appendChild(canvas);
 
     const meta = document.createElement('div'); meta.className = 'clip-meta';
-    meta.innerHTML = `<div class="clip-name" title="${clip.name}">${clip.name}</div><div class="clip-dur">${clip.duration?fmt(clip.duration):'…'}</div>`;
+    meta.innerHTML = `<div class="clip-name" title="${clip.name}">${clip.isImage ? '🖼 ' : ''}${clip.name}</div><div class="clip-dur">${clip.duration?fmt(clip.duration):'…'}${clip.isImage ? ' (still)' : ''}</div>`;
     card.appendChild(meta);
 
     const btn = document.createElement('button');
@@ -935,8 +1062,8 @@ function addToTimeline(clipId) {
   // Place after last segment on that track
   const lastEnd = segments
     .filter(s => s.trackId === vTrack.id)
-    .reduce((m, s) => Math.max(m, s.startTime + s.trimOut - s.trimIn), 0);
-  segments.push({ id:'i'+(nextIId++), clipId, trackId:vTrack.id, startTime:lastEnd, trimIn:0, trimOut:clip.duration, fadeIn:0, fadeOut:0 });
+    .reduce((m, s) => Math.max(m, s.startTime + segDur(s)), 0);
+  segments.push({ id:'i'+(nextIId++), clipId, trackId:vTrack.id, startTime:lastEnd, trimIn:0, trimOut:clip.duration, fadeIn:0, fadeOut:0, speed:1, transition:0 });
   snapshot();
   if (segments.length === 1) { ensureVideoLoaded(clip); video.currentTime = 0; playingSegId = segments[0].id; }
   trimIn = 0; trimOut = totalDur();
@@ -976,10 +1103,21 @@ function updateRenderBtn() {
 }
 
 // ── Playback ───────────────────────────────────────────────────────────
+const imgPreview = $('image-preview');
+
 function ensureVideoLoaded(clip) {
   if (loadedClipId === clip.id) return;
-  video.src = clip.url; loadedClipId = clip.id;
-  dropOverlay.style.display = 'none'; video.style.display = 'block';
+  dropOverlay.style.display = 'none';
+  if (clip.isImage) {
+    video.style.display = 'none';
+    imgPreview.style.display = 'block';
+    imgPreview.src = clip.url;
+  } else {
+    imgPreview.style.display = 'none';
+    video.style.display = 'block';
+    video.src = clip.url;
+  }
+  loadedClipId = clip.id;
 }
 
 function getTrackVolume() {
@@ -994,7 +1132,7 @@ function applyFadePreview() {
   const seg = segments.find(s => s.id === playingSegId);
   if (!seg) return;
   const localTime = video.currentTime - seg.trimIn;
-  const segDur = seg.trimOut - seg.trimIn;
+  const dur = seg.trimOut - seg.trimIn; // source duration (not speed-adjusted)
   let fadeMultiplier = 1;
 
   // Fade in: ramp from 0 to 1 over fadeIn duration
@@ -1002,14 +1140,63 @@ function applyFadePreview() {
     fadeMultiplier = Math.max(0, localTime / seg.fadeIn);
   }
   // Fade out: ramp from 1 to 0 over fadeOut duration
-  if (seg.fadeOut && localTime > segDur - seg.fadeOut) {
-    fadeMultiplier = Math.min(fadeMultiplier, Math.max(0, (segDur - localTime) / seg.fadeOut));
+  if (seg.fadeOut && localTime > dur - seg.fadeOut) {
+    fadeMultiplier = Math.min(fadeMultiplier, Math.max(0, (dur - localTime) / seg.fadeOut));
   }
 
   // Apply to audio volume
   video.volume = getTrackVolume() * fadeMultiplier;
   // Apply to video opacity (fade to black)
   video.style.opacity = fadeMultiplier;
+}
+
+function applySegSpeed() {
+  const seg = segments.find(s => s.id === playingSegId);
+  video.playbackRate = seg?.speed || 1;
+}
+
+function applyTransitionPreview(seg) {
+  if (!seg) return;
+  // Find the next segment on the same track (sorted by time)
+  const trackSegs = segments
+    .filter(s => s.trackId === seg.trackId)
+    .sort((a, b) => a.startTime - b.startTime);
+  const idx = trackSegs.findIndex(s => s.id === seg.id);
+  if (idx < 0 || idx >= trackSegs.length - 1) return;
+  const next = trackSegs[idx + 1];
+  const xfDur = next.transition || 0;
+  if (xfDur <= 0) return;
+
+  // How far into the transition region are we?
+  const segEnd = seg.startTime + segDur(seg);
+  const xfStart = segEnd - xfDur;
+  if (masterTime >= xfStart && masterTime <= segEnd) {
+    const progress = (masterTime - xfStart) / xfDur; // 0→1
+    // Fade out current segment (dissolve effect)
+    video.style.opacity = Math.max(0, 1 - progress);
+    video.volume = getTrackVolume() * (1 - progress);
+  }
+}
+
+function updateTextPreview() {
+  const tp = $('text-preview');
+  const active = textOverlays.find(o => masterTime >= o.startTime && masterTime <= o.startTime + o.duration);
+  if (!active) { tp.style.display = 'none'; return; }
+  tp.style.display = 'block';
+  tp.textContent = active.text;
+  tp.style.fontSize = active.fontSize + 'px';
+  tp.style.color = active.color;
+  // Position
+  const pos = active.position;
+  tp.style.left = tp.style.right = tp.style.top = tp.style.bottom = 'auto';
+  tp.style.transform = 'none';
+  if (pos === 'center') { tp.style.left = '50%'; tp.style.top = '50%'; tp.style.transform = 'translate(-50%,-50%)'; }
+  else if (pos === 'top') { tp.style.left = '50%'; tp.style.top = '10%'; tp.style.transform = 'translateX(-50%)'; }
+  else if (pos === 'bottom') { tp.style.left = '50%'; tp.style.bottom = '10%'; tp.style.transform = 'translateX(-50%)'; }
+  else if (pos === 'top-left') { tp.style.left = '5%'; tp.style.top = '5%'; }
+  else if (pos === 'top-right') { tp.style.right = '5%'; tp.style.top = '5%'; }
+  else if (pos === 'bottom-left') { tp.style.left = '5%'; tp.style.bottom = '10%'; }
+  else if (pos === 'bottom-right') { tp.style.right = '5%'; tp.style.bottom = '10%'; }
 }
 
 function applyTrackVolume() {
@@ -1020,11 +1207,15 @@ function applyTrackVolume() {
 video.addEventListener('timeupdate', () => {
   const seg = segments.find(s => s.id === playingSegId);
   if (!seg) return;
-  masterTime = seg.startTime + Math.max(0, video.currentTime - seg.trimIn);
+  const spd = seg.speed || 1;
+  masterTime = seg.startTime + Math.max(0, (video.currentTime - seg.trimIn) / spd);
   positionPlayhead();
   timeDisplay.textContent = `${fmt(masterTime)} / ${fmt(totalDur())}`;
   // Apply fade during playback
   if (seg.fadeIn || seg.fadeOut) applyFadePreview();
+  // Crossfade preview: fade out near end if next segment has a transition
+  applyTransitionPreview(seg);
+  updateTextPreview();
   if (video.currentTime >= seg.trimOut - 0.05) advancePlayback();
 });
 
@@ -1038,51 +1229,67 @@ function advancePlayback() {
     const next = vSegs[idx + 1];
     playingSegId = next.id;
     const clip = clips.find(c => c.id === next.clipId);
-    const wasPlaying = !video.paused;
-    const needsSourceChange = loadedClipId !== clip.id;
+    const wasPlaying = !video.paused || !!_imgPlayTimer;
 
-    if (needsSourceChange) {
-      // Different source file — need to wait for it to load
-      video.src = clip.url; loadedClipId = clip.id;
-      dropOverlay.style.display = 'none'; video.style.display = 'block';
-      const onReady = () => {
-        video.removeEventListener('canplay', onReady);
-        video.currentTime = next.trimIn;
-        applyTrackVolume();
-        if (wasPlaying) video.play().catch(() => {});
-      };
-      video.addEventListener('canplay', onReady);
-      video.load();
+    stopImgPlayback();
+    ensureVideoLoaded(clip);
+
+    if (clip.isImage) {
+      // Image segment — start timer-based playback
+      masterTime = next.startTime;
+      if (wasPlaying) {
+        _imgPlayTimer = setInterval(() => {
+          masterTime += 1/30;
+          if (masterTime >= next.startTime + segDur(next)) { advancePlayback(); return; }
+          positionPlayhead();
+          updateTextPreview();
+          timeDisplay.textContent = `${fmt(masterTime)} / ${fmt(totalDur())}`;
+          if (masterTime >= totalDur()) stopImgPlayback();
+        }, 1000/30);
+      }
+      positionPlayhead();
     } else {
-      // Same source — just seek
+      // Video segment
       video.currentTime = next.trimIn;
-      applyTrackVolume();
+      applyTrackVolume(); applySegSpeed();
       if (wasPlaying) video.play().catch(() => {});
     }
   } else {
+    stopImgPlayback();
     video.pause();
     video.style.opacity = 1;
   }
 }
 
+let _imgPlayTimer = null;
+
+function stopImgPlayback() {
+  if (_imgPlayTimer) { clearInterval(_imgPlayTimer); _imgPlayTimer = null; }
+}
+
 function seekToMasterTime(t) {
   masterTime = t;
+  stopImgPlayback();
   // Search ALL video tracks (not just the first)
   const vSegs = segments
     .filter(s => tracks.find(tr => tr.id === s.trackId)?.type === 'video')
     .sort((a, b) => a.startTime - b.startTime);
   if (!vSegs.length) { positionPlayhead(); return; }
-  const seg = vSegs.find(s => t >= s.startTime && t < s.startTime + s.trimOut - s.trimIn)
+  const seg = vSegs.find(s => t >= s.startTime && t < s.startTime + segDur(s))
            || vSegs.find(s => s.startTime >= t)
            || vSegs[vSegs.length - 1];
   if (seg) {
     playingSegId = seg.id;
     const clip = clips.find(c => c.id === seg.clipId);
     ensureVideoLoaded(clip);
-    video.currentTime = Math.max(seg.trimIn, Math.min(seg.trimOut, seg.trimIn + (t - seg.startTime)));
-    applyTrackVolume();
+    if (!clip.isImage) {
+      video.currentTime = Math.max(seg.trimIn, Math.min(seg.trimOut, seg.trimIn + (t - seg.startTime) * (seg.speed || 1)));
+      applyTrackVolume();
+      applySegSpeed();
+    }
   }
   positionPlayhead();
+  updateTextPreview();
   timeDisplay.textContent = `${fmt(t)} / ${fmt(totalDur())}`;
 }
 
@@ -1091,9 +1298,29 @@ function positionPlayhead() {
   tracksPh.style.left = x; rulerPhLine.style.left = x; rulerPhDot.style.left = x;
 }
 
+// ── Text overlay hit-test + drag state ─────────────────────────────────
+let textDragState = null; // {ovId, startClientX, origTime, startScrollLeft}
+let hoveredTextId = null;
+
+function textOvAtPt(cx) {
+  const t = Xt(cx);
+  return textOverlays.find(o => t >= o.startTime && t <= o.startTime + o.duration) || null;
+}
+
 // ── Canvas interactions ────────────────────────────────────────────────
 tracksCanvas.addEventListener('mousemove', e => {
   const { x: cx, y: cy } = canvasPt(e);
+  // Text overlay drag
+  if (textDragState) {
+    const ov = textOverlays.find(o => o.id === textDragState.ovId);
+    if (ov) {
+      const deltaX = e.clientX - textDragState.startClientX + (trackScrollEl.scrollLeft - textDragState.startScrollLeft);
+      ov.startTime = Math.max(0, textDragState.origTime + deltaX / pxPerS());
+    }
+    drawTracks();
+    return;
+  }
+  // Segment drag
   if (dragState) {
     const seg = segments.find(s => s.id === dragState.segId);
     if (seg) {
@@ -1116,8 +1343,13 @@ tracksCanvas.addEventListener('mousemove', e => {
   const seg = segAtPt(cx, cy);
   const prev = hoveredSegId;
   hoveredSegId = seg?.id || null;
-  if (prev !== hoveredSegId) drawTracks();
-  tracksCanvas.style.cursor = seg ? (isOverDelete(seg, cx, cy) ? 'pointer' : 'grab') : 'crosshair';
+  // Check for text overlay hover (top 18px of canvas = text bar zone)
+  const tov = (!seg && cy <= 18) ? textOvAtPt(cx) : null;
+  const prevText = hoveredTextId;
+  hoveredTextId = tov?.id || null;
+  if (prev !== hoveredSegId || prevText !== hoveredTextId) drawTracks();
+  if (tov) tracksCanvas.style.cursor = 'grab';
+  else tracksCanvas.style.cursor = seg ? (isOverDelete(seg, cx, cy) ? 'pointer' : 'grab') : 'crosshair';
 });
 
 tracksCanvas.addEventListener('mouseleave', () => {
@@ -1128,6 +1360,15 @@ tracksCanvas.addEventListener('mouseleave', () => {
 tracksCanvas.addEventListener('mousedown', e => {
   if (e.button !== 0) return;
   const { x: cx, y: cy } = canvasPt(e);
+  // Check text overlay first (top 18px zone)
+  if (cy <= 18) {
+    const tov = textOvAtPt(cx);
+    if (tov) {
+      textDragState = { ovId: tov.id, startClientX: e.clientX, origTime: tov.startTime, startScrollLeft: trackScrollEl.scrollLeft };
+      e.preventDefault();
+      return;
+    }
+  }
   const seg = segAtPt(cx, cy);
   if (!seg) {
     selectedSegId = null; drawTracks();
@@ -1142,8 +1383,12 @@ tracksCanvas.addEventListener('mousedown', e => {
 });
 
 document.addEventListener('mouseup', () => {
+  if (textDragState) {
+    textDragState = null;
+    snapshot(); drawTracks();
+    return;
+  }
   if (dragState) {
-    // Snap to integer frames optionally — skip for now
     const seg = segments.find(s => s.id === dragState.segId);
     if (seg) { trimIn = 0; trimOut = totalDur(); updateTrimUI(); snapshot(); }
     dragState = null;
@@ -1165,7 +1410,28 @@ document.addEventListener('keydown', e => {
   if (e.key === ' ' || e.code === 'Space') {
     e.preventDefault();
     if (!segments.length) return;
-    video.paused ? video.play().catch(()=>{}) : video.pause();
+    const curSeg = segments.find(s => s.id === playingSegId);
+    const curClip = curSeg ? clips.find(c => c.id === curSeg.clipId) : null;
+    if (curClip?.isImage) {
+      // Toggle image playback timer
+      if (_imgPlayTimer) {
+        stopImgPlayback();
+      } else {
+        _imgPlayTimer = setInterval(() => {
+          masterTime += 1/30;
+          const seg = segments.find(s => s.id === playingSegId);
+          if (seg && masterTime >= seg.startTime + segDur(seg)) {
+            advancePlayback();
+          }
+          positionPlayhead();
+          updateTextPreview();
+          timeDisplay.textContent = `${fmt(masterTime)} / ${fmt(totalDur())}`;
+          if (masterTime >= totalDur()) stopImgPlayback();
+        }, 1000/30);
+      }
+    } else {
+      video.paused ? video.play().catch(()=>{}) : video.pause();
+    }
     return;
   }
 
@@ -1213,9 +1479,25 @@ tracksCanvas.addEventListener('contextmenu', e => {
   const seg = segAtPt(cx, cy);
   if (!seg) return;
   ctxSeg = seg; selectedSegId = seg.id; drawTracks();
+  // Check for text overlay at click point
+  const ctxTime = Xt(cx);
+  const ctxTextOv = textOverlays.find(o => ctxTime >= o.startTime && ctxTime <= o.startTime + o.duration);
+  $('ctx-text-sep').style.display = ctxTextOv ? '' : 'none';
+  $('ctx-edit-text').style.display = ctxTextOv ? '' : 'none';
+  $('ctx-del-text').style.display = ctxTextOv ? '' : 'none';
+  $('ctx-edit-text')._textOv = ctxTextOv;
+  $('ctx-del-text')._textOv = ctxTextOv;
   // Update fade labels
   $('ctx-fade-in').textContent  = seg.fadeIn  ? 'Remove Fade In'  : 'Fade In (1s)';
   $('ctx-fade-out').textContent = seg.fadeOut ? 'Remove Fade Out' : 'Fade Out (1s)';
+  // Highlight current transition
+  ctxXfadeSub.querySelectorAll('[data-xfade]').forEach(el => {
+    el.style.color = parseFloat(el.dataset.xfade) === (seg.transition || 0) ? 'var(--accent)' : '';
+  });
+  // Highlight current speed
+  ctxSpeedSub.querySelectorAll('[data-speed]').forEach(el => {
+    el.style.color = parseFloat(el.dataset.speed) === (seg.speed || 1) ? 'var(--accent)' : '';
+  });
   ctxMenu.style.cssText = `display:block;left:${e.clientX}px;top:${e.clientY}px`;
   requestAnimationFrame(() => {
     const r = ctxMenu.getBoundingClientRect();
@@ -1237,7 +1519,42 @@ $('ctx-fade-clear').addEventListener('click', () => {
   if (ctxSeg) { ctxSeg.fadeIn = 0; ctxSeg.fadeOut = 0; snapshot(); drawTracks(); }
   ctxMenu.style.display = 'none';
 });
+// Crossfade/transition submenu
+const ctxXfadeItem = $('ctx-xfade');
+const ctxXfadeSub = $('ctx-xfade-sub');
+ctxXfadeItem.addEventListener('mouseenter', () => ctxXfadeSub.style.display = 'block');
+ctxXfadeItem.addEventListener('mouseleave', () => ctxXfadeSub.style.display = 'none');
+ctxXfadeSub.querySelectorAll('[data-xfade]').forEach(el => {
+  el.addEventListener('click', e => {
+    e.stopPropagation();
+    if (ctxSeg) { ctxSeg.transition = parseFloat(el.dataset.xfade); snapshot(); drawTracks(); }
+    ctxMenu.style.display = 'none';
+  });
+});
+
+// Speed submenu
+const ctxSpeedItem = $('ctx-speed');
+const ctxSpeedSub = $('ctx-speed-sub');
+ctxSpeedItem.addEventListener('mouseenter', () => ctxSpeedSub.style.display = 'block');
+ctxSpeedItem.addEventListener('mouseleave', () => ctxSpeedSub.style.display = 'none');
+ctxSpeedSub.querySelectorAll('[data-speed]').forEach(el => {
+  el.addEventListener('click', e => {
+    e.stopPropagation();
+    if (ctxSeg) { ctxSeg.speed = parseFloat(el.dataset.speed); snapshot(); onTimelineChanged(); }
+    ctxMenu.style.display = 'none';
+  });
+});
 $('ctx-delete').addEventListener('click', () => { if (ctxSeg) deleteSegment(ctxSeg.id); ctxMenu.style.display = 'none'; });
+$('ctx-edit-text').addEventListener('click', () => {
+  const ov = $('ctx-edit-text')._textOv;
+  if (ov) showTextEditor(ov);
+  ctxMenu.style.display = 'none';
+});
+$('ctx-del-text').addEventListener('click', () => {
+  const ov = $('ctx-del-text')._textOv;
+  if (ov) { textOverlays = textOverlays.filter(t => t.id !== ov.id); snapshot(); drawTracks(); }
+  ctxMenu.style.display = 'none';
+});
 
 // Seek from ruler
 rulerInner.addEventListener('click', e => {
@@ -1389,6 +1706,9 @@ function drawTracks() {
   // Segments
   segments.forEach(seg => drawSegment(ctx, seg));
 
+  // Text overlays
+  drawTextOverlays(ctx);
+
   // Dim overlay
   drawDim(ctx, w, h);
 }
@@ -1498,6 +1818,44 @@ function drawSegment(ctx, seg) {
     ctx.restore();
   }
 
+  // Crossfade/transition indicator
+  if (seg.transition > 0) {
+    const xfPx = seg.transition * pxPerS();
+    if (xfPx > 2) {
+      ctx.save();
+      ctx.beginPath(); ctx.rect(x1, by, sw, bh); ctx.clip();
+      // Gradient overlay at start of segment
+      const xfGrad = ctx.createLinearGradient(x1, 0, x1 + xfPx, 0);
+      xfGrad.addColorStop(0, 'rgba(180,120,255,.45)');
+      xfGrad.addColorStop(1, 'rgba(180,120,255,0)');
+      ctx.fillStyle = xfGrad;
+      ctx.fillRect(x1, by, xfPx, bh);
+      // Diagonal cross lines
+      ctx.strokeStyle = 'rgba(180,120,255,.6)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(x1, by + bh); ctx.lineTo(x1 + xfPx, by); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x1, by); ctx.lineTo(x1 + xfPx, by + bh); ctx.stroke();
+      // Label
+      if (xfPx > 30) {
+        ctx.fillStyle = 'rgba(180,120,255,.9)'; ctx.font = 'bold 8px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('XF', x1 + xfPx / 2, by + bh / 2 + 3);
+        ctx.textAlign = 'start';
+      }
+      ctx.restore();
+    }
+  }
+
+  // Speed badge
+  if ((seg.speed || 1) !== 1) {
+    const label = seg.speed + 'x';
+    ctx.font = 'bold 9px sans-serif';
+    const tw = ctx.measureText(label).width + 6;
+    const bx = x1 + sw - tw - 2, bby = by + bh - 14;
+    ctx.fillStyle = 'rgba(255,180,0,.9)';
+    ctx.beginPath(); ctx.roundRect(bx, bby, tw, 12, 3); ctx.fill();
+    ctx.fillStyle = '#111'; ctx.textAlign = 'center';
+    ctx.fillText(label, bx + tw/2, bby + 9.5); ctx.textAlign = 'start';
+  }
+
   // Border
   ctx.strokeStyle = isSel ? '#fff' : clip.border;
   ctx.lineWidth   = isSel ? 2 : 1.5;
@@ -1550,18 +1908,18 @@ function doSplit() {
   // Find segment at masterTime — prefer selected, else any
   let seg = selectedSegId ? segments.find(s => s.id === selectedSegId) : null;
   if (seg) {
-    const end = seg.startTime + seg.trimOut - seg.trimIn;
+    const end = seg.startTime + segDur(seg);
     if (masterTime <= seg.startTime + 0.05 || masterTime >= end - 0.05) seg = null;
   }
   if (!seg) {
     seg = segments.find(s => {
-      const end = s.startTime + s.trimOut - s.trimIn;
+      const end = s.startTime + segDur(s);
       return masterTime > s.startTime + 0.05 && masterTime < end - 0.05;
     });
   }
   if (!seg) { statusEl.textContent = 'Playhead must be inside a segment to split'; return; }
-  const localT = seg.trimIn + (masterTime - seg.startTime);
-  const right  = { id:'i'+(nextIId++), clipId:seg.clipId, trackId:seg.trackId, startTime:masterTime, trimIn:localT, trimOut:seg.trimOut, fadeIn:0, fadeOut:seg.fadeOut };
+  const localT = seg.trimIn + (masterTime - seg.startTime) * (seg.speed || 1);
+  const right  = { id:'i'+(nextIId++), clipId:seg.clipId, trackId:seg.trackId, startTime:masterTime, trimIn:localT, trimOut:seg.trimOut, fadeIn:0, fadeOut:seg.fadeOut, speed:seg.speed||1, transition:0 };
   seg.trimOut  = localT;
   seg.fadeOut   = 0;
   segments.push(right);
@@ -1618,43 +1976,105 @@ renderBtn.addEventListener('click', () => {
 });
 
 $('export-go').addEventListener('click', async () => {
-  exportOverlay.classList.remove('show');
   const format   = $('exp-format').value;
   const res      = $('exp-res').value;
   const quality  = parseInt(expQuality.value);
   const speed    = parseFloat($('exp-speed').value);
 
-  const vTrack = tracks.find(t => t.type === 'video');
-  if (!vTrack) return;
   const d = totalDur(); if (!d) return;
-  const vSegs = segments.filter(s => s.trackId === vTrack.id).sort((a,b) => a.startTime - b.startTime);
-  const items = [];
-  for (const s of vSegs) {
-    const end = s.startTime + s.trimOut - s.trimIn;
+  const timeline = [];
+  for (const s of [...segments].sort((a, b) => a.startTime - b.startTime || tracks.findIndex(t => t.id === a.trackId) - tracks.findIndex(t => t.id === b.trackId))) {
+    const end = s.startTime + segDur(s);
     if (end <= trimIn || s.startTime >= trimOut) continue;
     const clip = clips.find(c => c.id === s.clipId);
     if (!clip?.serverPath) { statusEl.textContent = `"${clip?.name}" still uploading.`; return; }
-    const start = s.trimIn + Math.max(0, trimIn - s.startTime);
-    const stop  = s.trimIn + Math.min(s.trimOut - s.trimIn, trimOut - s.startTime);
+    const start = s.trimIn + Math.max(0, (trimIn - s.startTime) * (s.speed || 1));
+    const stop  = s.trimIn + Math.min(s.trimOut - s.trimIn, (trimOut - s.startTime) * (s.speed || 1));
     const track = tracks.find(t => t.id === s.trackId);
     const vol = (track?.muted) ? 0 : (track?.volume ?? 1);
-    items.push({ serverPath: clip.serverPath, start, end: stop, volume: vol, fadeIn: s.fadeIn || 0, fadeOut: s.fadeOut || 0 });
+    timeline.push({
+      serverPath: clip.serverPath,
+      start,
+      end: stop,
+      startTime: Math.max(0, s.startTime - trimIn),
+      volume: vol,
+      fadeIn: s.fadeIn || 0,
+      fadeOut: s.fadeOut || 0,
+      speed: s.speed || 1,
+      isImage: !!clip.isImage,
+      transition: s.transition || 0,
+      trackId: s.trackId,
+      trackType: track?.type || 'video',
+      trackIndex: tracks.findIndex(t => t.id === s.trackId)
+    });
   }
-  if (!items.length) { statusEl.textContent = 'No video segments in render region.'; return; }
+  if (!timeline.length) { statusEl.textContent = 'No segments in render region.'; return; }
+
+  const exportTextOverlays = textOverlays
+    .map(ov => {
+      const ovStart = Math.max(trimIn, ov.startTime);
+      const ovEnd = Math.min(trimOut, ov.startTime + ov.duration);
+      if (ovEnd <= ovStart) return null;
+      return {
+        ...ov,
+        startTime: (ovStart - trimIn) / speed,
+        duration: (ovEnd - ovStart) / speed
+      };
+    })
+    .filter(Boolean);
+
+  // Show progress bar
+  const progressEl = $('export-progress');
+  const progressFill = $('export-progress-fill');
+  const progressPct = $('export-progress-pct');
+  const progressText = $('export-progress-text');
+  progressEl.classList.add('show');
+  progressFill.style.width = '0%';
+  progressPct.textContent = '0%';
+  progressText.textContent = 'Rendering...';
+  $('export-go').disabled = true;
   renderBtn.disabled = true; renderBtn.textContent = 'Rendering…';
   const ext = format === 'gif' ? 'gif' : format === 'webm' ? 'webm' : 'mp4';
+
   try {
+    // Start the render job
     const r = await fetch('/render', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items, format, resolution: res, quality, speed })
+      body: JSON.stringify({ timeline, format, resolution: res, quality, speed, textOverlays: exportTextOverlays })
     });
     if (!r.ok) { const { error } = await r.json(); throw new Error(error); }
-    const blob = await r.blob();
+    const { jobId } = await r.json();
+
+    // Listen for progress via SSE
+    await new Promise((resolve, reject) => {
+      const es = new EventSource(`/render/progress/${jobId}`);
+      es.onmessage = (ev) => {
+        const { progress, status } = JSON.parse(ev.data);
+        const pct = Math.round(progress * 100);
+        progressFill.style.width = pct + '%';
+        progressPct.textContent = pct + '%';
+        if (status === 'done') {
+          es.close(); resolve();
+        } else if (status === 'error') {
+          es.close(); reject(new Error('Render failed'));
+        }
+      };
+      es.onerror = () => { es.close(); reject(new Error('Connection lost')); };
+    });
+
+    progressText.textContent = 'Downloading...';
+    // Download the result
+    const dl = await fetch(`/render/download/${jobId}`);
+    if (!dl.ok) throw new Error('Download failed');
+    const blob = await dl.blob();
     const a = Object.assign(document.createElement('a'), { href:URL.createObjectURL(blob), download:`render.${ext}` });
     a.click(); URL.revokeObjectURL(a.href);
     statusEl.textContent = 'Export complete';
+    exportOverlay.classList.remove('show');
   } catch(err) { statusEl.textContent = 'Render failed: ' + err.message; }
+  progressEl.classList.remove('show');
+  $('export-go').disabled = false;
   renderBtn.textContent = '▼ Render'; renderBtn.disabled = false;
 });
 
@@ -1688,10 +2108,12 @@ async function saveProject() {
     clips: clips.map(c => ({
       id: c.id, name: c.name, duration: c.duration,
       bg: c.bg, border: c.border, wave: c.wave,
-      serverPath: c.serverPath, mediaUrl: c.mediaUrl
+      serverPath: c.serverPath, mediaUrl: c.mediaUrl,
+      isImage: c.isImage || false
     })),
+    textOverlays: textOverlays.map(t => ({...t})),
     trimIn, trimOut, masterTime,
-    nextCId, nextIId, nextTId
+    nextCId, nextIId, nextTId, nextTextId
   };
   try {
     const r = await fetch('/project/save', {
@@ -1779,12 +2201,14 @@ async function loadProject(id) {
     projectId  = id;
     tracks     = data.tracks;
     segments   = data.segments;
+    textOverlays = data.textOverlays || [];
     trimIn     = data.trimIn || 0;
     trimOut    = data.trimOut || 0;
     masterTime = data.masterTime || 0;
     nextCId    = data.nextCId || nextCId;
     nextIId    = data.nextIId || nextIId;
     nextTId    = data.nextTId || nextTId;
+    nextTextId = data.nextTextId || nextTextId;
 
     // Restore clips — use mediaUrl to load video from server
     let first = true;
@@ -1794,11 +2218,21 @@ async function loadProject(id) {
         id: sc.id, name: sc.name, duration: sc.duration,
         file: null, url, serverPath: sc.serverPath, mediaUrl: sc.mediaUrl,
         bg: sc.bg, border: sc.border, wave: sc.wave,
-        thumbBitmaps: [], peaks: null
+        thumbBitmaps: [], peaks: null, isImage: sc.isImage || false
       };
       clips.push(clip);
 
-      if (url) {
+      if (url && clip.isImage) {
+        // Load image thumbnail
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          const off = Object.assign(document.createElement('canvas'), { width:80, height:56 });
+          off.getContext('2d').drawImage(img, 0, 0, 80, 56);
+          createImageBitmap(off).then(bmp => { clip.thumbBitmaps = [{ bitmap: bmp }]; renderSidebar(); drawTracks(); });
+        };
+        img.src = url;
+      } else if (url) {
         // Load video element to extract thumbs + audio
         const tv = document.createElement('video');
         tv.muted = true; tv.preload = 'metadata'; tv.crossOrigin = 'anonymous'; tv.src = url;
@@ -1837,6 +2271,109 @@ async function loadProject(id) {
     statusEl.textContent = 'Load failed: ' + err.message;
   }
 }
+
+// ── Text Overlay Editor ──────────────────────────────────────────────
+const textEditorOverlay = $('text-editor-overlay');
+const teText  = $('te-text');
+const teSize  = $('te-size');
+const teSizeVal = $('te-size-val');
+const teColor = $('te-color');
+const tePos   = $('te-pos');
+const teDur   = $('te-dur');
+let _editingTextId = null;
+
+teSize.addEventListener('input', () => teSizeVal.textContent = teSize.value);
+
+function showTextEditor(existingOverlay) {
+  if (existingOverlay) {
+    _editingTextId = existingOverlay.id;
+    $('te-title').textContent = 'Edit Text Overlay';
+    teText.value = existingOverlay.text;
+    teSize.value = existingOverlay.fontSize; teSizeVal.textContent = existingOverlay.fontSize;
+    teColor.value = existingOverlay.color;
+    tePos.value = existingOverlay.position;
+    teDur.value = existingOverlay.duration;
+  } else {
+    _editingTextId = null;
+    $('te-title').textContent = 'Add Text Overlay';
+    teText.value = ''; teSize.value = '48'; teSizeVal.textContent = '48';
+    teColor.value = '#ffffff'; tePos.value = 'center'; teDur.value = '3';
+  }
+  textEditorOverlay.classList.add('show');
+  teText.focus();
+}
+
+$('te-cancel').addEventListener('click', () => textEditorOverlay.classList.remove('show'));
+textEditorOverlay.addEventListener('click', e => { if (e.target === textEditorOverlay) textEditorOverlay.classList.remove('show'); });
+
+$('te-ok').addEventListener('click', () => {
+  const text = teText.value.trim();
+  if (!text) return;
+  if (_editingTextId) {
+    const ov = textOverlays.find(t => t.id === _editingTextId);
+    if (ov) {
+      ov.text = text; ov.fontSize = parseInt(teSize.value);
+      ov.color = teColor.value; ov.position = tePos.value;
+      ov.duration = parseFloat(teDur.value);
+    }
+  } else {
+    textOverlays.push({
+      id: 'txt' + (nextTextId++),
+      text,
+      fontSize: parseInt(teSize.value),
+      color: teColor.value,
+      position: tePos.value,
+      startTime: masterTime,
+      duration: parseFloat(teDur.value)
+    });
+  }
+  textEditorOverlay.classList.remove('show');
+  snapshot(); drawTracks();
+});
+
+$('add-text-btn').addEventListener('click', () => showTextEditor(null));
+
+// Draw text overlays on the tracks canvas
+function drawTextOverlays(ctx) {
+  const d = totalDur(); if (!d) return;
+  const h = tracksCanvas.height;
+  for (const ov of textOverlays) {
+    const x1 = tX(ov.startTime);
+    const x2 = tX(ov.startTime + ov.duration);
+    const w = Math.max(4, x2 - x1);
+    const isHov = ov.id === hoveredTextId;
+    const isDrag = textDragState?.ovId === ov.id;
+
+    // Semi-transparent overlay region
+    ctx.fillStyle = isHov || isDrag ? 'rgba(255,220,100,.14)' : 'rgba(255,220,100,.06)';
+    ctx.fillRect(x1, 0, w, h);
+    // Top grab bar (18px tall)
+    const barAlpha = isHov || isDrag ? '.85' : '.55';
+    ctx.fillStyle = `rgba(255,200,60,${barAlpha})`;
+    ctx.beginPath(); ctx.roundRect(x1, 0, w, 18, [0,0,3,3]); ctx.fill();
+    // Text label on bar
+    ctx.fillStyle = '#111';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.save(); ctx.beginPath(); ctx.rect(x1 + 2, 1, w - 4, 16); ctx.clip();
+    ctx.fillText('T: ' + ov.text, x1 + 5, 13);
+    ctx.restore();
+    // Dashed side borders
+    ctx.strokeStyle = 'rgba(255,220,100,.3)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(x1 + .5, 18); ctx.lineTo(x1 + .5, h); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x1 + w - .5, 18); ctx.lineTo(x1 + w - .5, h); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+// Double-click on text overlay to edit
+tracksCanvas.addEventListener('dblclick', e => {
+  const { x: cx } = canvasPt(e);
+  const t = Xt(cx);
+  const ov = textOverlays.find(o => t >= o.startTime && t <= o.startTime + o.duration);
+  if (ov) showTextEditor(ov);
+});
 
 // ── Init ───────────────────────────────────────────────────────────────
 renderTrackLabels();
