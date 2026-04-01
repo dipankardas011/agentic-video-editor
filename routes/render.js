@@ -19,7 +19,7 @@ router.get('/progress/:jobId', (req, res) => {
   const interval = setInterval(() => {
     const job = renderJobs.get(jobId);
     if (!job) { clearInterval(interval); res.end(); return; }
-    res.write(`data: ${JSON.stringify({ progress: job.progress, status: job.status })}\n\n`);
+    res.write(`data: ${JSON.stringify({ progress: job.progress, status: job.status, error: job.error || null })}\n\n`);
     if (job.status === 'done' || job.status === 'error') {
       clearInterval(interval);
       res.end();
@@ -62,7 +62,10 @@ router.post('/', async (req, res) => {
     const job = renderJobs.get(jobId);
     if (job) { job.status = 'done'; job.output = output; job.ext = ext; }
   } catch (err) {
-    console.error('[render error]', String(err));
+    const errStr = String(err);
+    // Print last 15 lines of ffmpeg stderr for the actual error
+    const lines = errStr.split('\n').filter(l => l.trim());
+    console.error('[render error]', lines.slice(-15).join('\n'));
     const job = renderJobs.get(jobId);
     if (job) { job.status = 'error'; job.error = String(err); }
   }
