@@ -411,6 +411,25 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 }
 #te-ok:hover{background:linear-gradient(135deg,rgba(74,158,255,.3),rgba(40,120,220,.15));border-color:rgba(74,158,255,.8);box-shadow:0 0 14px rgba(74,158,255,.2)}
 
+/* ── Subtitle transcribing overlay ────────────────────────────────── */
+#subtitle-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);
+  align-items:center;justify-content:center;z-index:3000;backdrop-filter:blur(3px);
+}
+#subtitle-overlay.show{display:flex}
+#subtitle-modal{
+  background:#1c1c1c;border:1px solid #333;border-radius:14px;
+  padding:32px 40px;min-width:320px;text-align:center;
+  box-shadow:0 20px 80px rgba(0,0,0,.9);
+}
+#subtitle-modal p{font-size:13px;color:#aaa;margin-top:14px}
+#subtitle-modal small{font-size:11px;color:#555;display:block;margin-top:6px}
+.sub-spinner{
+  width:36px;height:36px;border:3px solid #333;border-top-color:var(--accent);
+  border-radius:50%;animation:spin .8s linear infinite;margin:0 auto;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
 /* ── Export progress ───────────────────────────────────────────────── */
 #export-progress{display:none;margin-top:18px}
 #export-progress.show{display:block}
@@ -441,6 +460,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);
     <div class="tb-sep"></div>
     <button class="tb-btn orange" id="split-btn" disabled>✂ Split</button>
     <button class="tb-btn" id="add-text-btn" title="Add text overlay (T)">T Text</button>
+    <button class="tb-btn" id="subtitle-btn" disabled title="Auto-generate subtitles from selected segment (Whisper)">CC Sub</button>
     <button class="tb-btn green"  id="render-btn" disabled>&#9660; Render</button>
   </div>
 </div>
@@ -560,6 +580,14 @@ html,body{height:100%;background:var(--bg);color:var(--text);
   </div>
 </div>
 
+<div id="subtitle-overlay">
+  <div id="subtitle-modal">
+    <div class="sub-spinner"></div>
+    <p>Transcribing audio…</p>
+    <small id="subtitle-model-label"></small>
+  </div>
+</div>
+
 <div id="text-editor-overlay">
   <div id="text-editor-modal">
     <h3 id="te-title">Add Text Overlay</h3>
@@ -658,6 +686,7 @@ const statusEl      = $('status');
 const trimInfoEl    = $('trim-info');
 const timeDisplay   = $('time-display');
 const splitBtn      = $('split-btn');
+const subtitleBtn   = $('subtitle-btn');
 const renderBtn     = $('render-btn');
 const rulerScroll   = $('ruler-scroll');
 const rulerInner    = $('ruler-inner');
@@ -1091,7 +1120,7 @@ function deleteSegment(segId) {
 
 function onTimelineChanged() {
   setInnerWidths(); drawAll(); positionHandles(); positionPlayhead();
-  renderSidebar(); updateRenderBtn();
+  renderSidebar(); updateRenderBtn(); updateSubtitleBtn();
   splitBtn.disabled = segments.length === 0;
   const d = totalDur();
   trimInfoEl.style.color = d ? 'var(--dim)' : '#555';
@@ -1100,6 +1129,14 @@ function onTimelineChanged() {
 
 function updateRenderBtn() {
   renderBtn.disabled = !(segments.length > 0 && segments.every(s => clips.find(c => c.id === s.clipId)?.serverPath));
+}
+
+function updateSubtitleBtn() {
+  if (!selectedSegId) { subtitleBtn.disabled = true; return; }
+  const seg = segments.find(s => s.id === selectedSegId);
+  if (!seg) { subtitleBtn.disabled = true; return; }
+  const clip = clips.find(c => c.id === seg.clipId);
+  subtitleBtn.disabled = !(clip?.serverPath && !clip.isImage);
 }
 
 // ── Playback ───────────────────────────────────────────────────────────
@@ -1711,6 +1748,8 @@ function drawTracks() {
 
   // Dim overlay
   drawDim(ctx, w, h);
+
+  updateSubtitleBtn();
 }
 
 function lighten(hex, amt) {
@@ -2335,6 +2374,75 @@ $('te-ok').addEventListener('click', () => {
 });
 
 $('add-text-btn').addEventListener('click', () => showTextEditor(null));
+
+// ── Auto-subtitle (Whisper) ────────────────────────────────────────────
+function parseSRT(srt) {
+  const entries = [];
+  for (const block of srt.trim().split(/\n\n+/)) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 3) continue;
+    const m = lines[1].match(/(\d{2}:\d{2}:\d{2}[,.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,.]\d{3})/);
+    if (!m) continue;
+    const tc = s => { const [h,mi,rest] = s.split(':'); const [sec,ms] = rest.replace(',','.').split('.'); return +h*3600 + +mi*60 + +sec + +ms/1000; };
+    entries.push({ start: tc(m[1]), end: tc(m[2]), text: lines.slice(2).join('\n').trim() });
+  }
+  return entries;
+}
+
+subtitleBtn.addEventListener('click', async () => {
+  const seg = segments.find(s => s.id === selectedSegId);
+  if (!seg) return;
+  const clip = clips.find(c => c.id === seg.clipId);
+  if (!clip?.serverPath) return;
+
+  subtitleBtn.disabled = true;
+  const subtitleOverlay = $('subtitle-overlay');
+  subtitleOverlay.classList.add('show');
+
+  try {
+    const r = await fetch('/subtitle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clipPath: clip.serverPath })
+    });
+    const data = await r.json();
+    subtitleOverlay.classList.remove('show');
+    if (!r.ok) throw new Error(data.error || r.statusText);
+
+    const entries = parseSRT(data.srt);
+    if (!entries.length) { statusEl.textContent = 'No speech detected'; return; }
+
+    // Convert SRT timestamps (relative to file start) to timeline positions
+    let added = 0;
+    for (const e of entries) {
+      // Filter: only entries that overlap the segment's trim range
+      if (e.end <= seg.trimIn || e.start >= seg.trimOut) continue;
+      const clampedStart = Math.max(e.start, seg.trimIn);
+      const clampedEnd   = Math.min(e.end,   seg.trimOut);
+      const tlStart = seg.startTime + (clampedStart - seg.trimIn) / (seg.speed || 1);
+      const tlDur   = (clampedEnd - clampedStart) / (seg.speed || 1);
+      if (tlDur < 0.1) continue;
+      textOverlays.push({
+        id: 'txt' + (nextTextId++),
+        text: e.text,
+        fontSize: 36,
+        color: 'white',
+        position: 'bottom',
+        startTime: tlStart,
+        duration: tlDur
+      });
+      added++;
+    }
+
+    snapshot(); drawTracks();
+    statusEl.textContent = `Subtitles added: ${added} line${added !== 1 ? 's' : ''}`;
+  } catch (err) {
+    subtitleOverlay.classList.remove('show');
+    statusEl.textContent = 'Subtitle error: ' + err.message;
+  } finally {
+    updateSubtitleBtn();
+  }
+});
 
 // Draw text overlays on the tracks canvas
 function drawTextOverlays(ctx) {
