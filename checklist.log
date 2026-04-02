@@ -2,7 +2,7 @@
                         VIDEOEDITOR — PRODUCT CHECKLIST
 ================================================================================
 
-Legend:  [x] Done   [ ] Todo   [~] Partial
+Legend:  [x] Done   [ ] Todo   [~] Partial / In progress
 
 
 ────────────────────────────────────────────────────────────────────────────────
@@ -35,32 +35,34 @@ Legend:  [x] Done   [ ] Todo   [~] Partial
 ────────────────────────────────────────────────────────────────────────────────
   TRANSITIONS
 ────────────────────────────────────────────────────────────────────────────────
-[ ] Crossfade / dissolve between adjacent clips
+[~] Crossfade / dissolve between adjacent clips (preview + overlay render, no xfade filter)
 [ ] Wipe transitions (left, right, up, down)
 [ ] Slide transitions
 [ ] Transition duration control (drag to resize)
 [ ] Transition presets library panel
-[~] Audio crossfade (between audio segments) — per-segment fade in/out done
+[x] Audio fade in / fade out per segment
 
 ────────────────────────────────────────────────────────────────────────────────
   TEXT & TITLES
 ────────────────────────────────────────────────────────────────────────────────
-[ ] Add text overlay on timeline
-[ ] Font picker (family, size, weight)
-[ ] Text color, stroke, shadow controls
-[ ] Text position (drag on preview)
+[x] Add text overlay on timeline (drag to reposition, right-click to edit/delete)
+[x] Font size + color controls
+[x] Text position (9-position preset, draggable on timeline bar)
+[x] Text shadow
+[x] Subtitle burn-in on export (via applyTextOverlays / drawtext textfile=)
+[x] Auto-subtitle generation (server-side Whisper, model via WHISPER_MODEL env)
+[ ] Font picker (family, weight)
 [ ] Text animation (fade in/out, slide, typewriter)
 [ ] Lower thirds template
 [ ] Scrolling credits
 [ ] Subtitle import (.srt / .ass)
-[ ] Subtitle burn-in on export
 
 ────────────────────────────────────────────────────────────────────────────────
   COLOR & EFFECTS
 ────────────────────────────────────────────────────────────────────────────────
 [ ] Brightness / contrast / saturation sliders
 [ ] Color wheels (lift / gamma / gain)
-[ ] LUT support (.cube file import)
+[x] LUT support (.cube file import, per-segment via right-click, lut3d export)
 [ ] Hue / temperature shift
 [ ] Black & white / sepia presets
 [ ] Chroma key (green screen removal)
@@ -87,7 +89,7 @@ Legend:  [x] Done   [ ] Todo   [~] Partial
 [x] Waveform visualization on timeline
 [x] Volume slider per track
 [x] Mute per track
-[x] Audio fade in / fade out
+[x] Audio fade in / fade out per segment
 [ ] Volume envelope (rubber-band keyframes on waveform)
 [ ] EQ (bass / mid / treble)
 [ ] Compressor / limiter
@@ -101,8 +103,8 @@ Legend:  [x] Done   [ ] Todo   [~] Partial
 ────────────────────────────────────────────────────────────────────────────────
   SPEED & TIME
 ────────────────────────────────────────────────────────────────────────────────
-[x] Export speed option (0.25x to 4x)
-[ ] Per-segment speed control (with UI on timeline)
+[x] Per-segment speed control (0.25x–4x, right-click context menu)
+[x] Global export speed option
 [ ] Reverse playback
 [ ] Freeze frame
 [ ] Time-lapse (high speed)
@@ -112,18 +114,17 @@ Legend:  [x] Done   [ ] Todo   [~] Partial
 ────────────────────────────────────────────────────────────────────────────────
   EXPORT
 ────────────────────────────────────────────────────────────────────────────────
-[x] MP4 (H.264) export
+[x] MP4 (H.264 / h264_nvenc / h264_qsv) export
 [x] WebM (VP9) export
 [x] GIF export
-[x] Resolution presets (1080p, 720p, 480p, vertical, square)
+[x] Resolution presets (4K, 2K, 1080p, 720p)
 [x] Quality slider (CRF)
-[x] Speed option on export
+[x] Export progress bar (SSE real-time from ffmpeg)
+[x] Hardware encoder override (FFMPEG_MP4_ENCODER env var)
 [ ] Two-pass encoding for target bitrate
 [ ] Audio-only export (MP3 / WAV / AAC)
 [ ] Frame export (single frame as PNG/JPG)
-[ ] Sprite sheet / contact sheet
 [ ] Batch export (multiple presets at once)
-[ ] Export progress bar (real-time ffmpeg progress)
 [ ] Background render (Web Worker)
 [ ] Custom ffmpeg flags (advanced users)
 
@@ -135,11 +136,11 @@ Legend:  [x] Done   [ ] Todo   [~] Partial
 [x] Project list & delete UI
 [x] Persistent media storage (media/ folder)
 [x] Auto-save (periodic, 30s interval)
+[x] Import images as still frames (timer-based playback, overlay render)
 [ ] Project rename
 [ ] Project duplicate
 [ ] Media bin (folders, tags, search, favorites)
 [ ] Proxy editing (generate low-res for smooth scrubbing)
-[ ] Import images (as still frames with configurable duration)
 [ ] Import audio-only files (MP3, WAV)
 [ ] Recent projects on startup
 
@@ -149,27 +150,25 @@ Legend:  [x] Done   [ ] Todo   [~] Partial
 [x] Dark theme
 [x] Sidebar clip library
 [x] Thumbnail preview in sidebar + timeline
-[x] Context menu (right-click)
+[x] Context menu (right-click on segments: speed, transition, fade, text)
 [x] Time display (current / total)
 [x] Timeline zoom (Ctrl+scroll, +/- keys)
+[x] Fullscreen preview (F key)
+[x] Keyboard shortcut reference panel (? key, Esc to close, click outside)
 [ ] Minimap (overview bar above timeline)
 [ ] Resizable panels (sidebar width, timeline height)
-[x] Fullscreen preview (F key)
-[ ] Keyboard shortcut reference panel (? key)
 [ ] Tooltips on all buttons
 [ ] Responsive / mobile-friendly layout
 [ ] Touch gesture support (tablet editing)
 [ ] Light theme toggle
-[ ] Custom accent color
 [ ] Notification toasts (instead of status bar text)
 [ ] Drag-and-drop reorder tracks
 
 ────────────────────────────────────────────────────────────────────────────────
   AI-POWERED (DIFFERENTIATORS)
 ────────────────────────────────────────────────────────────────────────────────
-[ ] Auto-subtitle generation (Whisper WASM)
+[x] Auto-subtitle generation (server-side Whisper, WHISPER_MODEL env, adds as text overlays)
 [ ] Scene detection (auto-split at cuts)
-[ ] Silence detection & removal
 [ ] Auto-color correction
 [ ] Smart crop (subject tracking)
 [ ] AI background removal

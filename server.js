@@ -15,5 +15,6 @@ app.use('/project', require('./routes/projects'));
 app.use('/clip',    require('./routes/clips'));
 app.use('/render',   require('./routes/render'));
 app.use('/subtitle', require('./routes/subtitle'));
+app.use('/lut',      require('./routes/lut'));
 
 app.listen(PORT, () => console.log(`VideoEditor → http://localhost:${PORT}`));

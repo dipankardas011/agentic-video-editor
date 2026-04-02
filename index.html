@@ -137,6 +137,32 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 .clip-btn.rem{border:1px solid rgba(255,74,74,.35);color:#ff5555}
 .clip-btn.rem:hover{background:rgba(255,74,74,.1)}
 
+/* ── LUT sidebar panel ───────────────────────────────────────────────── */
+#lut-panel{flex-shrink:0;border-top:1px solid var(--border);background:#111}
+#lut-hdr{
+  height:32px;display:flex;align-items:center;padding:0 12px;gap:6px;
+  background:linear-gradient(180deg,#1d1d1d 0%,#171717 100%);
+  border-bottom:1px solid var(--border);cursor:pointer;
+}
+#lut-hdr span{flex:1;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--dim)}
+#lut-hdr .lut-add-btn{
+  background:rgba(61,255,170,.08);border:1px solid rgba(61,255,170,.2);
+  color:var(--green);border-radius:4px;width:20px;height:20px;
+  cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;
+}
+#lut-hdr .lut-add-btn:hover{background:rgba(61,255,170,.15);border-color:rgba(61,255,170,.5)}
+#lut-list{max-height:110px;overflow-y:auto;padding:6px 8px;display:flex;flex-direction:column;gap:4px}
+#lut-list:empty::after{content:'No LUTs — click + to upload a .cube file';display:block;padding:10px 4px;font-size:10px;color:#333;line-height:1.6}
+.lut-chip{
+  display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;
+  background:#181818;border:1px solid #252525;cursor:default;
+  font-size:11px;color:#aaa;transition:background .1s;
+}
+.lut-chip .lut-dot{width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,#ff9a3c,#3cffaa);flex-shrink:0}
+.lut-chip .lut-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lut-chip .lut-del{color:#444;cursor:pointer;font-size:13px;line-height:1;padding:0 2px}
+.lut-chip .lut-del:hover{color:#ff5555}
+
 /* ── Preview ─────────────────────────────────────────────────────────── */
 #preview-wrap{
   flex:1;display:flex;align-items:center;justify-content:center;
@@ -411,6 +437,35 @@ html,body{height:100%;background:var(--bg);color:var(--text);
 }
 #te-ok:hover{background:linear-gradient(135deg,rgba(74,158,255,.3),rgba(40,120,220,.15));border-color:rgba(74,158,255,.8);box-shadow:0 0 14px rgba(74,158,255,.2)}
 
+/* ── Keyboard shortcut panel ─────────────────────────────────────────── */
+#keys-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);
+  align-items:center;justify-content:center;z-index:4000;backdrop-filter:blur(4px);
+}
+#keys-overlay.show{display:flex}
+#keys-modal{
+  background:#1a1a1a;border:1px solid #2e2e2e;border-radius:16px;
+  padding:28px 32px;width:580px;max-height:80vh;overflow-y:auto;
+  box-shadow:0 24px 90px rgba(0,0,0,.9);
+}
+#keys-modal h3{
+  font-size:14px;font-weight:800;color:#ddd;margin-bottom:20px;
+  letter-spacing:-.2px;display:flex;align-items:center;justify-content:space-between;
+}
+#keys-modal h3 span{font-size:11px;color:#444;font-weight:400}
+.keys-section{margin-bottom:18px}
+.keys-section-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--dim);margin-bottom:8px}
+.keys-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px}
+.keys-row{display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid #1e1e1e}
+.keys-row:last-child{border-bottom:none}
+.keys-desc{font-size:11px;color:#999}
+.keys-combo{display:flex;gap:3px;flex-shrink:0}
+kbd{
+  display:inline-block;padding:2px 6px;border-radius:4px;
+  background:#252525;border:1px solid #383838;border-bottom-width:2px;
+  font-size:10px;font-family:ui-monospace,monospace;color:#bbb;white-space:nowrap;
+}
+
 /* ── Subtitle transcribing overlay ────────────────────────────────── */
 #subtitle-overlay{
   display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);
@@ -462,6 +517,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);
     <button class="tb-btn" id="add-text-btn" title="Add text overlay (T)">T Text</button>
     <button class="tb-btn" id="subtitle-btn" disabled title="Auto-generate subtitles from selected segment (Whisper)">CC Sub</button>
     <button class="tb-btn green"  id="render-btn" disabled>&#9660; Render</button>
+    <div class="tb-sep"></div>
+    <button class="tb-btn" id="keys-btn" title="Keyboard shortcuts (?)">⌨ ?</button>
   </div>
 </div>
 
@@ -480,6 +537,15 @@ html,body{height:100%;background:var(--bg);color:var(--text);
       </div>
     </div>
     <input type="file" id="clip-input" accept="video/*,image/*" multiple/>
+
+    <div id="lut-panel">
+      <div id="lut-hdr">
+        <span>LUTs</span>
+        <button class="lut-add-btn" id="lut-add-btn" title="Upload .cube LUT file">+</button>
+      </div>
+      <div id="lut-list"></div>
+      <input type="file" id="lut-input" accept=".cube" style="display:none"/>
+    </div>
   </div>
 
   <div id="preview-wrap">
@@ -580,6 +646,58 @@ html,body{height:100%;background:var(--bg);color:var(--text);
   </div>
 </div>
 
+<div id="keys-overlay">
+  <div id="keys-modal">
+    <h3>Keyboard Shortcuts <span>press ? or Esc to close</span></h3>
+
+    <div class="keys-section">
+      <div class="keys-section-title">Playback</div>
+      <div class="keys-grid">
+        <div class="keys-row"><span class="keys-desc">Play / Pause</span><span class="keys-combo"><kbd>Space</kbd></span></div>
+        <div class="keys-row"><span class="keys-desc">Step back 1 frame</span><span class="keys-combo"><kbd>←</kbd></span></div>
+        <div class="keys-row"><span class="keys-desc">Step forward 1 frame</span><span class="keys-combo"><kbd>→</kbd></span></div>
+        <div class="keys-row"><span class="keys-desc">Back 1 second</span><span class="keys-combo"><kbd>Shift</kbd><kbd>←</kbd></span></div>
+        <div class="keys-row"><span class="keys-desc">Forward 1 second</span><span class="keys-combo"><kbd>Shift</kbd><kbd>→</kbd></span></div>
+        <div class="keys-row"><span class="keys-desc">Jump back 5s</span><span class="keys-combo"><kbd>J</kbd></span></div>
+        <div class="keys-row"><span class="keys-desc">Pause</span><span class="keys-combo"><kbd>K</kbd></span></div>
+        <div class="keys-row"><span class="keys-desc">Jump forward 5s</span><span class="keys-combo"><kbd>L</kbd></span></div>
+        <div class="keys-row"><span class="keys-desc">Go to start</span><span class="keys-combo"><kbd>Home</kbd></span></div>
+        <div class="keys-row"><span class="keys-desc">Go to end</span><span class="keys-combo"><kbd>End</kbd></span></div>
+      </div>
+    </div>
+
+    <div class="keys-section">
+      <div class="keys-section-title">Editing</div>
+      <div class="keys-grid">
+        <div class="keys-row"><span class="keys-desc">Split at playhead</span><span class="keys-combo"><kbd>S</kbd></span></div>
+        <div class="keys-row"><span class="keys-desc">Delete selected segment</span><span class="keys-combo"><kbd>Del</kbd></span></div>
+        <div class="keys-row"><span class="keys-desc">Undo</span><span class="keys-combo"><kbd>Ctrl</kbd><kbd>Z</kbd></span></div>
+        <div class="keys-row"><span class="keys-desc">Redo</span><span class="keys-combo"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Z</kbd></span></div>
+        <div class="keys-row"><span class="keys-desc">Deselect</span><span class="keys-combo"><kbd>Esc</kbd></span></div>
+        <div class="keys-row"><span class="keys-desc">Add text overlay</span><span class="keys-combo"><kbd>T</kbd></span></div>
+      </div>
+    </div>
+
+    <div class="keys-section">
+      <div class="keys-section-title">View</div>
+      <div class="keys-grid">
+        <div class="keys-row"><span class="keys-desc">Zoom in timeline</span><span class="keys-combo"><kbd>+</kbd></span></div>
+        <div class="keys-row"><span class="keys-desc">Zoom out timeline</span><span class="keys-combo"><kbd>-</kbd></span></div>
+        <div class="keys-row"><span class="keys-desc">Zoom timeline (scroll)</span><span class="keys-combo"><kbd>Ctrl</kbd><kbd>Scroll</kbd></span></div>
+        <div class="keys-row"><span class="keys-desc">Fullscreen preview</span><span class="keys-combo"><kbd>F</kbd></span></div>
+        <div class="keys-row"><span class="keys-desc">Show shortcuts</span><span class="keys-combo"><kbd>?</kbd></span></div>
+      </div>
+    </div>
+
+    <div class="keys-section">
+      <div class="keys-section-title">Project</div>
+      <div class="keys-grid">
+        <div class="keys-row"><span class="keys-desc">Save project</span><span class="keys-combo"><kbd>Ctrl</kbd><kbd>S</kbd></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="subtitle-overlay">
   <div id="subtitle-modal">
     <div class="sub-spinner"></div>
@@ -646,6 +764,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);
     </div>
   </div>
   <div class="ctx-sep"></div>
+  <div class="ctx-item" id="ctx-lut" style="position:relative">
+    LUT ▸
+    <div id="ctx-lut-sub" style="display:none;position:absolute;left:100%;top:-5px;background:#1c1c1c;border:1px solid #333;border-radius:8px;padding:5px 0;min-width:160px;max-height:200px;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.75)">
+      <div class="ctx-item" data-lut="">None</div>
+    </div>
+  </div>
+  <div class="ctx-sep"></div>
   <div class="ctx-item danger" id="ctx-delete">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
     Delete segment
@@ -706,6 +831,7 @@ const tracksSection = $('tracks-section');
 const ctxMenu       = $('ctx-menu');
 
 // ── State ──────────────────────────────────────────────────────────────
+let luts       = []; // [{id, name, serverPath}] — loaded from server
 let clips      = [];
 let tracks     = [
   { id:'v1', type:'video', name:'V1', volume:1, muted:false },
@@ -1253,6 +1379,7 @@ video.addEventListener('timeupdate', () => {
   // Crossfade preview: fade out near end if next segment has a transition
   applyTransitionPreview(seg);
   updateTextPreview();
+  applyLutPreview(seg);
   if (video.currentTime >= seg.trimOut - 0.05) advancePlayback();
 });
 
@@ -1327,7 +1454,22 @@ function seekToMasterTime(t) {
   }
   positionPlayhead();
   updateTextPreview();
+  applyLutPreview(seg);
   timeDisplay.textContent = `${fmt(t)} / ${fmt(totalDur())}`;
+}
+
+// Approximate LUT visually on the video preview using CSS filter.
+// Not accurate — just gives the user a sense of the grade.
+function applyLutPreview(seg) {
+  if (!seg?.lut) { video.style.filter = ''; return; }
+  const lut = luts.find(l => l.serverPath === seg.lut);
+  if (!lut) { video.style.filter = ''; return; }
+  // Hash the LUT name to produce a consistent but varied look per LUT
+  let h = 0; for (const c of lut.name) h = (h * 31 + c.charCodeAt(0)) & 0xffffff;
+  const sat   = 0.85 + ((h & 0xff) / 255) * 0.5;        // 0.85–1.35
+  const cont  = 0.95 + (((h >> 8) & 0xff) / 255) * 0.2; // 0.95–1.15
+  const hue   = ((h >> 16) & 0x3f) - 16;                 // -16 to +47 deg
+  video.style.filter = `saturate(${sat.toFixed(2)}) contrast(${cont.toFixed(2)}) hue-rotate(${hue}deg)`;
 }
 
 function positionPlayhead() {
@@ -1505,9 +1647,22 @@ document.addEventListener('keydown', e => {
     return;
   }
 
-  // Escape — deselect
-  if (e.key === 'Escape') { selectedSegId = null; drawTracks(); }
+  // ? — keyboard shortcut panel
+  if (e.key === '?') { toggleKeysPanel(); return; }
+
+  // Escape — close panels or deselect
+  if (e.key === 'Escape') {
+    if ($('keys-overlay').classList.contains('show')) { $('keys-overlay').classList.remove('show'); return; }
+    selectedSegId = null; drawTracks();
+  }
 });
+
+// ── Keyboard shortcut panel ────────────────────────────────────────────
+function toggleKeysPanel() {
+  $('keys-overlay').classList.toggle('show');
+}
+$('keys-overlay').addEventListener('click', e => { if (e.target === $('keys-overlay')) $('keys-overlay').classList.remove('show'); });
+$('keys-btn').addEventListener('click', toggleKeysPanel);
 
 // Right-click context menu
 tracksCanvas.addEventListener('contextmenu', e => {
@@ -1535,6 +1690,8 @@ tracksCanvas.addEventListener('contextmenu', e => {
   ctxSpeedSub.querySelectorAll('[data-speed]').forEach(el => {
     el.style.color = parseFloat(el.dataset.speed) === (seg.speed || 1) ? 'var(--accent)' : '';
   });
+  // Build and highlight LUT submenu
+  buildLutSubmenu(seg);
   ctxMenu.style.cssText = `display:block;left:${e.clientX}px;top:${e.clientY}px`;
   requestAnimationFrame(() => {
     const r = ctxMenu.getBoundingClientRect();
@@ -1581,6 +1738,40 @@ ctxSpeedSub.querySelectorAll('[data-speed]').forEach(el => {
     ctxMenu.style.display = 'none';
   });
 });
+// LUT submenu
+const ctxLutItem = $('ctx-lut');
+const ctxLutSub  = $('ctx-lut-sub');
+ctxLutItem.addEventListener('mouseenter', () => ctxLutSub.style.display = 'block');
+ctxLutItem.addEventListener('mouseleave', () => ctxLutSub.style.display = 'none');
+
+function buildLutSubmenu(seg) {
+  ctxLutSub.innerHTML = '';
+  const noneEl = document.createElement('div');
+  noneEl.className = 'ctx-item';
+  noneEl.textContent = 'None';
+  noneEl.style.color = !seg.lut ? 'var(--accent)' : '';
+  noneEl.addEventListener('click', e => { e.stopPropagation(); if (ctxSeg) { ctxSeg.lut = null; snapshot(); drawTracks(); } ctxMenu.style.display = 'none'; });
+  ctxLutSub.appendChild(noneEl);
+  for (const l of luts) {
+    const el = document.createElement('div');
+    el.className = 'ctx-item';
+    el.textContent = l.name;
+    el.style.color = seg.lut === l.serverPath ? 'var(--green)' : '';
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      if (ctxSeg) { ctxSeg.lut = l.serverPath; snapshot(); drawTracks(); }
+      ctxMenu.style.display = 'none';
+    });
+    ctxLutSub.appendChild(el);
+  }
+  if (!luts.length) {
+    const hint = document.createElement('div');
+    hint.style.cssText = 'padding:8px 16px;font-size:10px;color:#444';
+    hint.textContent = 'Upload a .cube file in the sidebar';
+    ctxLutSub.appendChild(hint);
+  }
+}
+
 $('ctx-delete').addEventListener('click', () => { if (ctxSeg) deleteSegment(ctxSeg.id); ctxMenu.style.display = 'none'; });
 $('ctx-edit-text').addEventListener('click', () => {
   const ov = $('ctx-edit-text')._textOv;
@@ -1883,16 +2074,28 @@ function drawSegment(ctx, seg) {
     }
   }
 
-  // Speed badge
+  // Speed badge + LUT badge (bottom-right, stacked)
+  ctx.font = 'bold 9px sans-serif';
+  let badgeRight = x1 + sw - 2;
   if ((seg.speed || 1) !== 1) {
     const label = seg.speed + 'x';
-    ctx.font = 'bold 9px sans-serif';
     const tw = ctx.measureText(label).width + 6;
-    const bx = x1 + sw - tw - 2, bby = by + bh - 14;
+    badgeRight -= tw + 2;
     ctx.fillStyle = 'rgba(255,180,0,.9)';
-    ctx.beginPath(); ctx.roundRect(bx, bby, tw, 12, 3); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(badgeRight, by + bh - 14, tw, 12, 3); ctx.fill();
     ctx.fillStyle = '#111'; ctx.textAlign = 'center';
-    ctx.fillText(label, bx + tw/2, bby + 9.5); ctx.textAlign = 'start';
+    ctx.fillText(label, badgeRight + tw/2, by + bh - 4.5); ctx.textAlign = 'start';
+    badgeRight -= 2;
+  }
+  if (seg.lut) {
+    const lutName = luts.find(l => l.serverPath === seg.lut)?.name || 'LUT';
+    const label = '◈ ' + lutName.slice(0, 8);
+    const tw = ctx.measureText(label).width + 6;
+    const bx = Math.max(x1 + 2, badgeRight - tw);
+    ctx.fillStyle = 'rgba(61,255,170,.85)';
+    ctx.beginPath(); ctx.roundRect(bx, by + bh - 14, tw, 12, 3); ctx.fill();
+    ctx.fillStyle = '#0a2a1a'; ctx.textAlign = 'center';
+    ctx.fillText(label, bx + tw/2, by + bh - 4.5); ctx.textAlign = 'start';
   }
 
   // Border
@@ -2044,7 +2247,8 @@ $('export-go').addEventListener('click', async () => {
       transition: s.transition || 0,
       trackId: s.trackId,
       trackType: track?.type || 'video',
-      trackIndex: tracks.findIndex(t => t.id === s.trackId)
+      trackIndex: tracks.findIndex(t => t.id === s.trackId),
+      lut: s.lut || null
     });
   }
   if (!timeline.length) { statusEl.textContent = 'No segments in render region.'; return; }
@@ -2486,11 +2690,57 @@ tracksCanvas.addEventListener('dblclick', e => {
   if (ov) showTextEditor(ov);
 });
 
+// ── LUT panel ──────────────────────────────────────────────────────────
+function renderLutPanel() {
+  const list = $('lut-list');
+  list.innerHTML = '';
+  for (const l of luts) {
+    const chip = document.createElement('div');
+    chip.className = 'lut-chip';
+    chip.innerHTML = `<span class="lut-dot"></span><span class="lut-name" title="${l.name}">${l.name}</span><span class="lut-del" data-id="${l.id}" title="Remove">✕</span>`;
+    chip.querySelector('.lut-del').addEventListener('click', () => {
+      luts = luts.filter(x => x.id !== l.id);
+      // Clear lut from any segments using this LUT
+      segments.forEach(s => { if (s.lut === l.serverPath) s.lut = null; });
+      snapshot(); renderLutPanel(); drawTracks();
+    });
+    list.appendChild(chip);
+  }
+}
+
+$('lut-add-btn').addEventListener('click', () => $('lut-input').click());
+
+$('lut-input').addEventListener('change', async e => {
+  const file = e.target.files[0]; if (!file) return;
+  const fd = new FormData(); fd.append('cube', file);
+  statusEl.textContent = 'Uploading LUT…';
+  try {
+    const r = await fetch('/lut', { method: 'POST', body: fd });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error);
+    luts.push(data);
+    renderLutPanel();
+    statusEl.textContent = `LUT loaded: ${data.name}`;
+  } catch(err) {
+    statusEl.textContent = 'LUT upload failed: ' + err.message;
+  }
+  e.target.value = '';
+});
+
+async function loadLuts() {
+  try {
+    const r = await fetch('/lut');
+    luts = await r.json();
+    renderLutPanel();
+  } catch(_) {}
+}
+
 // ── Init ───────────────────────────────────────────────────────────────
 renderTrackLabels();
 setInnerWidths();
 drawAll();
 snapshot(); // initial state
+loadLuts();
 })();
 </script>
 </body>
