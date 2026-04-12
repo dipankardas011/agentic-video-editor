@@ -1,5 +1,12 @@
 # VideoEditor
 
+> [!NOTE]
+> Closing this Repo infavour of using davinci resolve https://x.com/DipankarDas011/status/2043395345900798250?s=20
+
+> [!WARNING]
+> We are archiving this repo
+
+
 Browser-based timeline video editor built with plain HTML/CSS/JS, Express, SQLite, and FFmpeg.
 
 ![](./demo.png)
